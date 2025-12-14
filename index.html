@@ -1,0 +1,2709 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ProcureFlow - Procurement Management System</title>
+  <!-- TailwindCSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- jQuery -->
+  <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+  <!-- DataTables -->
+  <link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/jquery.dataTables.min.css">
+  <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
+  <!-- SweetAlert2 -->
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  
+  <style id="app-style">
+    .sidebar-item.active {
+      background-color: #4f46e5;
+      color: white;
+    }
+    
+    .notification-badge {
+      position: absolute;
+      top: -5px;
+      right: -5px;
+      padding: 3px 6px;
+      border-radius: 50%;
+      background: #ef4444;
+      color: white;
+      font-size: 0.75rem;
+    }
+    
+    .status-badge {
+      display: inline-block;
+      padding: 0.25rem 0.5rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+    
+    .status-draft { background-color: #e5e7eb; color: #374151; }
+    .status-submitted { background-color: #dbeafe; color: #1e40af; }
+    .status-approved { background-color: #d1fae5; color: #065f46; }
+    .status-rejected { background-color: #fee2e2; color: #b91c1c; }
+    .status-ordered { background-color: #fef3c7; color: #92400e; }
+    
+    .po-created { background-color: #e5e7eb; color: #374151; }
+    .po-sent { background-color: #dbeafe; color: #1e40af; }
+    .po-partial { background-color: #fef3c7; color: #92400e; }
+    .po-closed { background-color: #d1fae5; color: #065f46; }
+    
+    .tab-content {
+      display: none;
+    }
+    
+    .tab-content.active {
+      display: block;
+    }
+    
+    .low-stock {
+      background-color: #fee2e2;
+    }
+    
+    .loading-spinner {
+      border: 4px solid rgba(0, 0, 0, 0.1);
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      border-left-color: #4f46e5;
+      animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+      0% {
+        transform: rotate(0deg);
+      }
+      100% {
+        transform: rotate(360deg);
+      }
+    }
+  </style>
+</head>
+<body class="bg-gray-50">
+  <div class="min-h-screen flex flex-col">
+    <!-- Top Navigation -->
+    <nav class="bg-white border-b border-gray-200 fixed z-30 w-full">
+      <div class="px-3 py-3 lg:px-5 lg:pl-3">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center justify-start">
+            <button id="toggleSidebarMobile" aria-expanded="true" aria-controls="sidebar" class="lg:hidden mr-2 text-gray-600 hover:text-gray-900 cursor-pointer p-2 hover:bg-gray-100 focus:bg-gray-100 focus:ring-2 focus:ring-gray-100 rounded">
+              <i class="fas fa-bars"></i>
+            </button>
+            <a href="javascript:void(0)" class="text-xl font-bold flex items-center lg:ml-2.5">
+              <span class="text-indigo-600"><i class="fas fa-boxes mr-2"></i></span>
+              <span class="self-center whitespace-nowrap">ProcureFlow</span>
+            </a>
+          </div>
+          <div class="flex items-center">
+            <div class="relative mr-4">
+              <button id="notificationButton" type="button" class="text-gray-500 hover:text-gray-900 p-2 relative">
+                <i class="far fa-bell text-xl"></i>
+                <span class="notification-badge">3</span>
+              </button>
+            </div>
+            <button type="button" class="flex items-center text-sm p-2 rounded-full text-white bg-indigo-600 hover:bg-indigo-700">
+              <span class="mr-2">Admin</span>
+              <img class="w-8 h-8 rounded-full" src="https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_960_720.png" alt="User">
+            </button>
+          </div>
+        </div>
+      </div>
+    </nav>
+    
+    <!-- Sidebar -->
+    <div class="flex overflow-hidden pt-16">
+      <aside id="sidebar" class="fixed hidden z-20 h-full top-0 left-0 pt-16 flex lg:flex flex-shrink-0 flex-col w-64 transition-width duration-75" aria-label="Sidebar">
+        <div class="relative flex-1 flex flex-col min-h-0 border-r border-gray-200 bg-white pt-0">
+          <div class="flex-1 flex flex-col pt-5 pb-4 overflow-y-auto">
+            <div class="flex-1 px-3 bg-white divide-y space-y-1">
+              <ul class="space-y-2 pb-2">
+                <li>
+                  <a href="javascript:void(0)" class="sidebar-item active text-base font-normal rounded-lg flex items-center p-2 hover:bg-gray-100 group" data-page="dashboard">
+                    <i class="fas fa-tachometer-alt w-6 h-6 text-gray-500 group-hover:text-gray-900 transition duration-75"></i>
+                    <span class="ml-3">Dashboard</span>
+                  </a>
+                </li>
+                <li>
+                  <a href="javascript:void(0)" class="sidebar-item text-base font-normal rounded-lg flex items-center p-2 hover:bg-gray-100 group" data-page="requisitions">
+                    <i class="fas fa-file-alt w-6 h-6 text-gray-500 group-hover:text-gray-900 transition duration-75"></i>
+                    <span class="ml-3">Requisitions</span>
+                  </a>
+                </li>
+                <li>
+                  <a href="javascript:void(0)" class="sidebar-item text-base font-normal rounded-lg flex items-center p-2 hover:bg-gray-100 group" data-page="purchase-orders">
+                    <i class="fas fa-shopping-cart w-6 h-6 text-gray-500 group-hover:text-gray-900 transition duration-75"></i>
+                    <span class="ml-3">Purchase Orders</span>
+                  </a>
+                </li>
+                <li>
+                  <a href="javascript:void(0)" class="sidebar-item text-base font-normal rounded-lg flex items-center p-2 hover:bg-gray-100 group" data-page="inventory">
+                    <i class="fas fa-warehouse w-6 h-6 text-gray-500 group-hover:text-gray-900 transition duration-75"></i>
+                    <span class="ml-3">Inventory</span>
+                  </a>
+                </li>
+                <li>
+                  <a href="javascript:void(0)" class="sidebar-item text-base font-normal rounded-lg flex items-center p-2 hover:bg-gray-100 group" data-page="reports">
+                    <i class="fas fa-chart-bar w-6 h-6 text-gray-500 group-hover:text-gray-900 transition duration-75"></i>
+                    <span class="ml-3">Reports</span>
+                  </a>
+                </li>
+                <li>
+                  <a href="javascript:void(0)" class="sidebar-item text-base font-normal rounded-lg flex items-center p-2 hover:bg-gray-100 group" data-page="admin">
+                    <i class="fas fa-cog w-6 h-6 text-gray-500 group-hover:text-gray-900 transition duration-75"></i>
+                    <span class="ml-3">Admin</span>
+                  </a>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </aside>
+      
+      <!-- Main Content -->
+      <div id="main-content" class="h-full w-full bg-gray-50 relative overflow-y-auto lg:ml-64">
+        <!-- Dashboard -->
+        <div id="dashboard" class="page-content active p-4 space-y-6">
+          <div class="flex items-center justify-between mb-4">
+            <h1 class="text-2xl font-semibold text-gray-900">Dashboard</h1>
+            <div class="flex space-x-3">
+              <div class="relative">
+                <select class="bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2.5">
+                  <option selected>Last 30 Days</option>
+                  <option>Last Quarter</option>
+                  <option>Year to Date</option>
+                  <option>Last Year</option>
+                </select>
+              </div>
+              <button class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg text-sm px-5 py-2.5 flex items-center">
+                <i class="fas fa-download mr-2"></i> Export
+              </button>
+            </div>
+          </div>
+          
+          <!-- Dashboard Cards -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+            <div class="bg-white shadow rounded-lg p-4 sm:p-6 xl:p-8">
+              <div class="flex items-center">
+                <div class="flex-shrink-0">
+                  <span class="text-2xl sm:text-3xl leading-none font-bold text-gray-900">$34,260</span>
+                  <h3 class="text-base font-normal text-gray-500">Monthly Spend</h3>
+                </div>
+                <div class="ml-5 w-0 flex items-center justify-end flex-1 text-green-500 text-base font-bold">
+                  14.6%
+                  <i class="fas fa-arrow-up ml-1"></i>
+                </div>
+              </div>
+            </div>
+            <div class="bg-white shadow rounded-lg p-4 sm:p-6 xl:p-8">
+              <div class="flex items-center">
+                <div class="flex-shrink-0">
+                  <span class="text-2xl sm:text-3xl leading-none font-bold text-gray-900">23</span>
+                  <h3 class="text-base font-normal text-gray-500">Open Requisitions</h3>
+                </div>
+                <div class="ml-5 w-0 flex items-center justify-end flex-1 text-red-500 text-base font-bold">
+                  5.2%
+                  <i class="fas fa-arrow-down ml-1"></i>
+                </div>
+              </div>
+            </div>
+            <div class="bg-white shadow rounded-lg p-4 sm:p-6 xl:p-8">
+              <div class="flex items-center">
+                <div class="flex-shrink-0">
+                  <span class="text-2xl sm:text-3xl leading-none font-bold text-gray-900">15</span>
+                  <h3 class="text-base font-normal text-gray-500">Pending Approvals</h3>
+                </div>
+                <div class="ml-5 w-0 flex items-center justify-end flex-1 text-yellow-500 text-base font-bold">
+                  Urgent: 3
+                </div>
+              </div>
+            </div>
+            <div class="bg-white shadow rounded-lg p-4 sm:p-6 xl:p-8">
+              <div class="flex items-center">
+                <div class="flex-shrink-0">
+                  <span class="text-2xl sm:text-3xl leading-none font-bold text-gray-900">7</span>
+                  <h3 class="text-base font-normal text-gray-500">Low Stock Alerts</h3>
+                </div>
+                <div class="ml-5 w-0 flex items-center justify-end flex-1 text-red-500 text-base font-bold">
+                  Action Needed
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Charts Row -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+            <div class="bg-white shadow rounded-lg p-4">
+              <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold text-gray-800">Monthly Spend by Category</h3>
+                <button class="text-gray-500 hover:text-gray-900">
+                  <i class="fas fa-ellipsis-v"></i>
+                </button>
+              </div>
+              <canvas id="spendByCategory" class="h-72"></canvas>
+            </div>
+            <div class="bg-white shadow rounded-lg p-4">
+              <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold text-gray-800">Requisition Status Breakdown</h3>
+                <button class="text-gray-500 hover:text-gray-900">
+                  <i class="fas fa-ellipsis-v"></i>
+                </button>
+              </div>
+              <canvas id="requisitionStatus" class="h-72"></canvas>
+            </div>
+          </div>
+          
+          <!-- Tables Row -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+            <div class="bg-white shadow rounded-lg">
+              <div class="p-4 border-b">
+                <h3 class="text-lg font-semibold text-gray-800">Recent Requisitions</h3>
+              </div>
+              <div class="overflow-x-auto">
+                <table class="table-auto w-full">
+                  <thead class="bg-gray-50">
+                    <tr>
+                      <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                      <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Requester</th>
+                      <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Items</th>
+                      <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+                      <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody class="bg-white divide-y divide-gray-200">
+                    <tr>
+                      <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">REQ-2025-0042</td>
+                      <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">Sarah Johnson</td>
+                      <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">Office Supplies</td>
+                      <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">$1,250.00</td>
+                      <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500"><span class="status-badge status-approved">Approved</span></td>
+                    </tr>
+                    <tr>
+                      <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">REQ-2025-0041</td>
+                      <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">Michael Chen</td>
+                      <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">IT Equipment</td>
+                      <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">$3,780.00</td>
+                      <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500"><span class="status-badge status-submitted">Submitted</span></td>
+                    </tr>
+                    <tr>
+                      <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">REQ-2025-0040</td>
+                      <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">Alex Rodriguez</td>
+                      <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">Marketing Materials</td>
+                      <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">$5,400.00</td>
+                      <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500"><span class="status-badge status-rejected">Rejected</span></td>
+                    </tr>
+                    <tr>
+                      <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">REQ-2025-0039</td>
+                      <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">Emily Wilson</td>
+                      <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">Raw Materials</td>
+                      <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">$12,750.00</td>
+                      <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500"><span class="status-badge status-ordered">Ordered</span></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <div class="p-4 border-t">
+                <a href="javascript:void(0)" class="text-sm font-medium text-indigo-600 hover:text-indigo-500" data-page="requisitions">View all requisitions</a>
+              </div>
+            </div>
+            
+            <div class="bg-white shadow rounded-lg">
+              <div class="p-4 border-b">
+                <h3 class="text-lg font-semibold text-gray-800">Low Stock Items</h3>
+              </div>
+              <div class="overflow-x-auto">
+                <table class="table-auto w-full">
+                  <thead class="bg-gray-50">
+                    <tr>
+                      <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item</th>
+                      <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Current Stock</th>
+                      <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reorder Level</th>
+                      <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
+                      <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody class="bg-white divide-y divide-gray-200">
+                    <tr class="low-stock">
+                      <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">Printer Paper A4</td>
+                      <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">5 boxes</td>
+                      <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">20 boxes</td>
+                      <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">Office Supplies</td>
+                      <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                        <button class="text-indigo-600 hover:text-indigo-900 font-medium">Reorder</button>
+                      </td>
+                    </tr>
+                    <tr class="low-stock">
+                      <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">HDMI Cables</td>
+                      <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">3 units</td>
+                      <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">10 units</td>
+                      <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">IT Storage</td>
+                      <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                        <button class="text-indigo-600 hover:text-indigo-900 font-medium">Reorder</button>
+                      </td>
+                    </tr>
+                    <tr class="low-stock">
+                      <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">Toner Cartridges</td>
+                      <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">2 units</td>
+                      <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">8 units</td>
+                      <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">Office Supplies</td>
+                      <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                        <button class="text-indigo-600 hover:text-indigo-900 font-medium">Reorder</button>
+                      </td>
+                    </tr>
+                    <tr class="low-stock">
+                      <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">Aluminum Sheets</td>
+                      <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">50 kg</td>
+                      <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">200 kg</td>
+                      <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">Manufacturing</td>
+                      <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                        <button class="text-indigo-600 hover:text-indigo-900 font-medium">Reorder</button>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <div class="p-4 border-t">
+                <a href="javascript:void(0)" class="text-sm font-medium text-indigo-600 hover:text-indigo-500" data-page="inventory">View all inventory</a>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Requisitions -->
+        <div id="requisitions" class="page-content p-4 space-y-6">
+          <div class="flex items-center justify-between mb-4">
+            <h1 class="text-2xl font-semibold text-gray-900">Requisitions</h1>
+            <button id="newRequisitionBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg text-sm px-5 py-2.5">
+              <i class="fas fa-plus mr-2"></i> New Requisition
+            </button>
+          </div>
+          
+          <!-- Filters -->
+          <div class="bg-white p-4 rounded-lg shadow mb-6">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label for="status-filter" class="block mb-2 text-sm font-medium text-gray-900">Status</label>
+                <select id="status-filter" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2.5">
+                  <option value="">All Statuses</option>
+                  <option value="draft">Draft</option>
+                  <option value="submitted">Submitted</option>
+                  <option value="approved">Approved</option>
+                  <option value="rejected">Rejected</option>
+                  <option value="ordered">Ordered</option>
+                </select>
+              </div>
+              <div>
+                <label for="cost-center-filter" class="block mb-2 text-sm font-medium text-gray-900">Cost Center</label>
+                <select id="cost-center-filter" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2.5">
+                  <option value="">All Cost Centers</option>
+                  <option value="it">IT Department</option>
+                  <option value="marketing">Marketing</option>
+                  <option value="operations">Operations</option>
+                  <option value="hr">Human Resources</option>
+                  <option value="finance">Finance</option>
+                </select>
+              </div>
+              <div>
+                <label for="date-filter" class="block mb-2 text-sm font-medium text-gray-900">Date Range</label>
+                <select id="date-filter" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2.5">
+                  <option value="">All Time</option>
+                  <option value="today">Today</option>
+                  <option value="week">This Week</option>
+                  <option value="month">This Month</option>
+                  <option value="quarter">This Quarter</option>
+                  <option value="year">This Year</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Requisitions Table -->
+          <div class="bg-white shadow rounded-lg overflow-hidden">
+            <table id="requisitionsTable" class="min-w-full divide-y divide-gray-200">
+              <thead class="bg-gray-50">
+                <tr>
+                  <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                  <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                  <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Requester</th>
+                  <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cost Center</th>
+                  <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Items</th>
+                  <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
+                  <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                  <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                </tr>
+              </thead>
+              <tbody class="bg-white divide-y divide-gray-200">
+                <tr>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">REQ-2025-0042</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Jun 12, 2025</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Sarah Johnson</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Marketing</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Office Supplies (5 items)</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">$1,250.00</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500"><span class="status-badge status-approved">Approved</span></td>
+                  <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <a href="javascript:void(0)" class="text-indigo-600 hover:text-indigo-900 mr-3">View</a>
+                  </td>
+                </tr>
+                <tr>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">REQ-2025-0041</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Jun 10, 2025</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Michael Chen</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">IT</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">IT Equipment (3 items)</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">$3,780.00</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500"><span class="status-badge status-submitted">Submitted</span></td>
+                  <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <a href="javascript:void(0)" class="text-indigo-600 hover:text-indigo-900 mr-3">View</a>
+                  </td>
+                </tr>
+                <tr>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">REQ-2025-0040</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Jun 08, 2025</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Alex Rodriguez</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Operations</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Marketing Materials (8 items)</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">$5,400.00</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500"><span class="status-badge status-rejected">Rejected</span></td>
+                  <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <a href="javascript:void(0)" class="text-indigo-600 hover:text-indigo-900 mr-3">View</a>
+                  </td>
+                </tr>
+                <tr>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">REQ-2025-0039</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Jun 05, 2025</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Emily Wilson</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Production</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Raw Materials (2 items)</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">$12,750.00</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500"><span class="status-badge status-ordered">Ordered</span></td>
+                  <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <a href="javascript:void(0)" class="text-indigo-600 hover:text-indigo-900 mr-3">View</a>
+                  </td>
+                </tr>
+                <tr>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">REQ-2025-0038</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Jun 02, 2025</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Robert Miller</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">HR</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Training Materials (4 items)</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">$2,300.00</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500"><span class="status-badge status-draft">Draft</span></td>
+                  <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <a href="javascript:void(0)" class="text-indigo-600 hover:text-indigo-900 mr-3">Edit</a>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          
+          <!-- New Requisition Modal -->
+          <div id="newRequisitionModal" class="fixed z-50 inset-0 overflow-y-auto hidden" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+            <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+              <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true"></div>
+              <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+              <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full">
+                <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                  <div class="sm:flex sm:items-start">
+                    <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
+                      <h3 class="text-lg leading-6 font-medium text-gray-900" id="modal-title">
+                        Create New Requisition
+                      </h3>
+                      <div class="mt-4">
+                        <form id="requisitionForm" class="space-y-4">
+                          <!-- Basic Info -->
+                          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                              <label for="cost-center" class="block text-sm font-medium text-gray-700">Cost Center</label>
+                              <select id="cost-center" name="cost-center" required class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                                <option value="">Select Cost Center</option>
+                                <option value="it">IT Department</option>
+                                <option value="marketing">Marketing</option>
+                                <option value="operations">Operations</option>
+                                <option value="hr">Human Resources</option>
+                                <option value="finance">Finance</option>
+                              </select>
+                            </div>
+                            <div>
+                              <label for="priority" class="block text-sm font-medium text-gray-700">Priority</label>
+                              <select id="priority" name="priority" class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                                <option value="low">Low</option>
+                                <option value="medium" selected>Medium</option>
+                                <option value="high">High</option>
+                                <option value="urgent">Urgent</option>
+                              </select>
+                            </div>
+                          </div>
+                          
+                          <!-- Justification -->
+                          <div>
+                            <label for="justification" class="block text-sm font-medium text-gray-700">Justification</label>
+                            <textarea id="justification" name="justification" rows="3" required class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="Explain the business need for this purchase..."></textarea>
+                          </div>
+                          
+                          <!-- Items Section -->
+                          <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Items</label>
+                            <div id="items-container">
+                              <div class="item-row grid grid-cols-12 gap-2 mb-2">
+                                <div class="col-span-5">
+                                  <input type="text" name="item-name[]" placeholder="Item Description" class="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" required>
+                                </div>
+                                <div class="col-span-2">
+                                  <input type="number" name="item-qty[]" placeholder="Qty" min="1" class="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" required>
+                                </div>
+                                <div class="col-span-3">
+                                  <input type="number" name="item-price[]" placeholder="Unit Price" min="0" step="0.01" class="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" required>
+                                </div>
+                                <div class="col-span-2 flex items-center justify-end">
+                                  <button type="button" class="remove-item text-red-600 hover:text-red-800" title="Remove item"><i class="fas fa-times"></i></button>
+                                </div>
+                              </div>
+                            </div>
+                            <button type="button" id="add-item" class="mt-2 inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                              <i class="fas fa-plus mr-2"></i> Add Item
+                            </button>
+                          </div>
+                        </form>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                  <button type="submit" form="requisitionForm" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:ml-3 sm:w-auto sm:text-sm">
+                    Submit Requisition
+                  </button>
+                  <button type="button" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm" id="saveDraftBtn">
+                    Save as Draft
+                  </button>
+                  <button type="button" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm" id="closeRequisitionBtn">
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Purchase Orders -->
+        <div id="purchase-orders" class="page-content p-4 space-y-6">
+          <div class="flex items-center justify-between mb-4">
+            <h1 class="text-2xl font-semibold text-gray-900">Purchase Orders</h1>
+            <button id="newPOBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg text-sm px-5 py-2.5">
+              <i class="fas fa-plus mr-2"></i> New Purchase Order
+            </button>
+          </div>
+          
+          <!-- Filters -->
+          <div class="bg-white p-4 rounded-lg shadow mb-6">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div>
+                <label for="po-status-filter" class="block mb-2 text-sm font-medium text-gray-900">Status</label>
+                <select id="po-status-filter" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2.5">
+                  <option value="">All Statuses</option>
+                  <option value="created">Created</option>
+                  <option value="sent">Sent</option>
+                  <option value="partial">Partially Received</option>
+                  <option value="closed">Closed</option>
+                </select>
+              </div>
+              <div>
+                <label for="vendor-filter" class="block mb-2 text-sm font-medium text-gray-900">Vendor</label>
+                <select id="vendor-filter" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2.5">
+                  <option value="">All Vendors</option>
+                  <option value="acme">Acme Supplies</option>
+                  <option value="tech">Tech Solutions</option>
+                  <option value="office">Office Depot</option>
+                  <option value="global">Global Manufacturing</option>
+                </select>
+              </div>
+              <div>
+                <label for="po-date-filter" class="block mb-2 text-sm font-medium text-gray-900">Date Range</label>
+                <select id="po-date-filter" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2.5">
+                  <option value="">All Time</option>
+                  <option value="today">Today</option>
+                  <option value="week">This Week</option>
+                  <option value="month">This Month</option>
+                  <option value="quarter">This Quarter</option>
+                  <option value="year">This Year</option>
+                </select>
+              </div>
+              <div>
+                <label for="po-search" class="block mb-2 text-sm font-medium text-gray-900">Search</label>
+                <div class="relative">
+                  <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                    <i class="fas fa-search text-gray-400"></i>
+                  </div>
+                  <input type="text" id="po-search" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-10 p-2.5" placeholder="PO#, Vendor, Item...">
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- PO Table -->
+          <div class="bg-white shadow rounded-lg overflow-hidden">
+            <table id="purchaseOrdersTable" class="min-w-full divide-y divide-gray-200">
+              <thead class="bg-gray-50">
+                <tr>
+                  <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">PO #</th>
+                  <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                  <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vendor</th>
+                  <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Items</th>
+                  <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
+                  <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                  <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                </tr>
+              </thead>
+              <tbody class="bg-white divide-y divide-gray-200">
+                <tr>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">PO-2025-1042</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Jun 15, 2025</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Office Depot</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Office Supplies (5 items)</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">$1,250.00</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500"><span class="status-badge po-sent">Sent</span></td>
+                  <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <a href="javascript:void(0)" class="text-indigo-600 hover:text-indigo-900 mr-3">View</a>
+                    <a href="javascript:void(0)" class="text-gray-600 hover:text-gray-900 mr-3"><i class="far fa-file-pdf"></i></a>
+                  </td>
+                </tr>
+                <tr>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">PO-2025-1041</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Jun 12, 2025</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Tech Solutions</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">IT Equipment (3 items)</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">$3,780.00</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500"><span class="status-badge po-partial">Partially Received</span></td>
+                  <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <a href="javascript:void(0)" class="text-indigo-600 hover:text-indigo-900 mr-3">View</a>
+                    <a href="javascript:void(0)" class="text-gray-600 hover:text-gray-900 mr-3"><i class="far fa-file-pdf"></i></a>
+                  </td>
+                </tr>
+                <tr>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">PO-2025-1040</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Jun 10, 2025</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Acme Supplies</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Marketing Materials (8 items)</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">$5,400.00</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500"><span class="status-badge po-created">Created</span></td>
+                  <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <a href="javascript:void(0)" class="text-indigo-600 hover:text-indigo-900 mr-3">View</a>
+                    <a href="javascript:void(0)" class="text-gray-600 hover:text-gray-900 mr-3"><i class="far fa-file-pdf"></i></a>
+                  </td>
+                </tr>
+                <tr>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">PO-2025-1039</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Jun 05, 2025</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Global Manufacturing</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Raw Materials (2 items)</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">$12,750.00</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500"><span class="status-badge po-closed">Closed</span></td>
+                  <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <a href="javascript:void(0)" class="text-indigo-600 hover:text-indigo-900 mr-3">View</a>
+                    <a href="javascript:void(0)" class="text-gray-600 hover:text-gray-900 mr-3"><i class="far fa-file-pdf"></i></a>
+                  </td>
+                </tr>
+                <tr>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">PO-2025-1038</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Jun 01, 2025</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Office Depot</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Training Materials (4 items)</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">$2,300.00</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500"><span class="status-badge po-closed">Closed</span></td>
+                  <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <a href="javascript:void(0)" class="text-indigo-600 hover:text-indigo-900 mr-3">View</a>
+                    <a href="javascript:void(0)" class="text-gray-600 hover:text-gray-900 mr-3"><i class="far fa-file-pdf"></i></a>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          
+          <!-- PO Detail Modal -->
+          <div id="poDetailModal" class="fixed z-50 inset-0 overflow-y-auto hidden" aria-labelledby="po-modal-title" role="dialog" aria-modal="true">
+            <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+              <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true"></div>
+              <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+              <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full">
+                <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                  <div class="sm:flex sm:items-start">
+                    <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
+                      <h3 class="text-lg leading-6 font-medium text-gray-900" id="po-modal-title">
+                        Purchase Order: PO-2025-1042
+                      </h3>
+                      <div class="mt-4 border-t pt-4">
+                        <!-- PO Header Info -->
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                          <div>
+                            <p class="text-sm font-medium text-gray-500">Vendor</p>
+                            <p class="text-sm text-gray-900">Office Depot</p>
+                            <p class="text-sm text-gray-500">123 Supply St, Business Park</p>
+                            <p class="text-sm text-gray-500">info@officedepot.com</p>
+                          </div>
+                          <div>
+                            <p class="text-sm font-medium text-gray-500">Ship To</p>
+                            <p class="text-sm text-gray-900">Headquarters</p>
+                            <p class="text-sm text-gray-500">456 Corporate Ave, Suite 100</p>
+                            <p class="text-sm text-gray-500">Business City, ST 12345</p>
+                          </div>
+                          <div>
+                            <p class="text-sm font-medium text-gray-500">Details</p>
+                            <p class="text-sm text-gray-900"><span class="font-medium">Date:</span> Jun 15, 2025</p>
+                            <p class="text-sm text-gray-900"><span class="font-medium">Status:</span> <span class="status-badge po-sent">Sent</span></p>
+                            <p class="text-sm text-gray-900"><span class="font-medium">Payment Terms:</span> Net 30</p>
+                          </div>
+                        </div>
+                        
+                        <!-- PO Line Items -->
+                        <div class="mb-6">
+                          <h4 class="text-md font-medium text-gray-900 mb-2">Line Items</h4>
+                          <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                              <tr>
+                                <th scope="col" class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item</th>
+                                <th scope="col" class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
+                                <th scope="col" class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Qty</th>
+                                <th scope="col" class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Unit Price</th>
+                                <th scope="col" class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
+                                <th scope="col" class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Received</th>
+                              </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200 text-sm">
+                              <tr>
+                                <td class="px-3 py-2">PEN-001</td>
+                                <td class="px-3 py-2">Premium Ballpoint Pens (Box of 12)</td>
+                                <td class="px-3 py-2">10</td>
+                                <td class="px-3 py-2">$12.50</td>
+                                <td class="px-3 py-2">$125.00</td>
+                                <td class="px-3 py-2">0</td>
+                              </tr>
+                              <tr>
+                                <td class="px-3 py-2">PAP-002</td>
+                                <td class="px-3 py-2">Copy Paper, Letter Size (Case of 10)</td>
+                                <td class="px-3 py-2">5</td>
+                                <td class="px-3 py-2">$45.00</td>
+                                <td class="px-3 py-2">$225.00</td>
+                                <td class="px-3 py-2">0</td>
+                              </tr>
+                              <tr>
+                                <td class="px-3 py-2">NOT-003</td>
+                                <td class="px-3 py-2">Legal Pads, Yellow (Pack of 12)</td>
+                                <td class="px-3 py-2">20</td>
+                                <td class="px-3 py-2">$24.00</td>
+                                <td class="px-3 py-2">$480.00</td>
+                                <td class="px-3 py-2">0</td>
+                              </tr>
+                              <tr>
+                                <td class="px-3 py-2">BIN-004</td>
+                                <td class="px-3 py-2">File Organizer, Desktop</td>
+                                <td class="px-3 py-2">15</td>
+                                <td class="px-3 py-2">$18.00</td>
+                                <td class="px-3 py-2">$270.00</td>
+                                <td class="px-3 py-2">0</td>
+                              </tr>
+                              <tr>
+                                <td class="px-3 py-2">STL-005</td>
+                                <td class="px-3 py-2">Stapler with Staples</td>
+                                <td class="px-3 py-2">10</td>
+                                <td class="px-3 py-2">$15.00</td>
+                                <td class="px-3 py-2">$150.00</td>
+                                <td class="px-3 py-2">0</td>
+                              </tr>
+                            </tbody>
+                            <tfoot>
+                              <tr class="bg-gray-50">
+                                <td colspan="4" class="px-3 py-2 text-sm font-medium text-gray-900 text-right">Subtotal:</td>
+                                <td class="px-3 py-2 text-sm font-medium text-gray-900">$1,250.00</td>
+                                <td></td>
+                              </tr>
+                              <tr class="bg-gray-50">
+                                <td colspan="4" class="px-3 py-2 text-sm font-medium text-gray-900 text-right">Tax:</td>
+                                <td class="px-3 py-2 text-sm font-medium text-gray-900">$0.00</td>
+                                <td></td>
+                              </tr>
+                              <tr class="bg-gray-50">
+                                <td colspan="4" class="px-3 py-2 text-sm font-medium text-gray-900 text-right">Total:</td>
+                                <td class="px-3 py-2 text-sm font-medium text-gray-900">$1,250.00</td>
+                                <td></td>
+                              </tr>
+                            </tfoot>
+                          </table>
+                        </div>
+                        
+                        <!-- 3-Way Match Status -->
+                        <div class="mb-6">
+                          <h4 class="text-md font-medium text-gray-900 mb-2">3-Way Match Status</h4>
+                          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div class="bg-gray-50 p-3 rounded-lg">
+                              <p class="text-sm font-medium text-gray-700">PO</p>
+                              <p class="text-sm text-gray-900">$1,250.00</p>
+                              <p class="text-xs text-green-600">Complete</p>
+                            </div>
+                            <div class="bg-gray-50 p-3 rounded-lg">
+                              <p class="text-sm font-medium text-gray-700">Goods Received</p>
+                              <p class="text-sm text-gray-900">$0.00 (0%)</p>
+                              <p class="text-xs text-red-600">Pending Receipt</p>
+                            </div>
+                            <div class="bg-gray-50 p-3 rounded-lg">
+                              <p class="text-sm font-medium text-gray-700">Invoice</p>
+                              <p class="text-sm text-gray-900">No Invoice</p>
+                              <p class="text-xs text-yellow-600">Awaiting Invoice</p>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <!-- Notes and Comments -->
+                        <div>
+                          <h4 class="text-md font-medium text-gray-900 mb-2">Notes and Special Instructions</h4>
+                          <div class="bg-gray-50 p-3 rounded-lg">
+                            <p class="text-sm text-gray-700">Please deliver all items to the loading dock at the back of the building between 9am-4pm Monday-Friday.</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                  <button type="button" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:ml-3 sm:w-auto sm:text-sm">
+                    <i class="far fa-file-pdf mr-2"></i> Generate PDF & Email
+                  </button>
+                  <button type="button" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm" id="receiveItemsBtn">
+                    <i class="fas fa-truck mr-2"></i> Receive Items
+                  </button>
+                  <button type="button" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm" id="closePOModalBtn">
+                    Close
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Inventory -->
+        <div id="inventory" class="page-content p-4 space-y-6">
+          <div class="flex items-center justify-between mb-4">
+            <h1 class="text-2xl font-semibold text-gray-900">Inventory Management</h1>
+            <div class="flex space-x-2">
+              <button id="newAdjustmentBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg text-sm px-5 py-2.5">
+                <i class="fas fa-plus-minus mr-2"></i> New Adjustment
+              </button>
+              <button id="exportInventoryBtn" class="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 font-medium rounded-lg text-sm px-5 py-2.5">
+                <i class="fas fa-download mr-2"></i> Export
+              </button>
+            </div>
+          </div>
+          
+          <!-- Tabs -->
+          <div class="border-b border-gray-200">
+            <nav class="-mb-px flex space-x-8">
+              <button class="inventory-tab whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm border-indigo-500 text-indigo-600 active" data-tab="current-inventory">
+                Current Inventory
+              </button>
+              <button class="inventory-tab whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300" data-tab="movement-log">
+                Movement Log
+              </button>
+              <button class="inventory-tab whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300" data-tab="low-stock">
+                Low Stock Items
+              </button>
+            </nav>
+          </div>
+          
+          <!-- Current Inventory Tab -->
+          <div id="current-inventory" class="tab-content active">
+            <!-- Filters -->
+            <div class="bg-white p-4 rounded-lg shadow mb-6">
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label for="location-filter" class="block mb-2 text-sm font-medium text-gray-900">Location</label>
+                  <select id="location-filter" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2.5">
+                    <option value="">All Locations</option>
+                    <option value="warehouse">Main Warehouse</option>
+                    <option value="office">Office Storage</option>
+                    <option value="production">Production Floor</option>
+                  </select>
+                </div>
+                <div>
+                  <label for="category-filter" class="block mb-2 text-sm font-medium text-gray-900">Category</label>
+                  <select id="category-filter" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2.5">
+                    <option value="">All Categories</option>
+                    <option value="office">Office Supplies</option>
+                    <option value="it">IT Equipment</option>
+                    <option value="raw">Raw Materials</option>
+                    <option value="finished">Finished Goods</option>
+                  </select>
+                </div>
+                <div>
+                  <label for="inventory-search" class="block mb-2 text-sm font-medium text-gray-900">Search</label>
+                  <div class="relative">
+                    <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                      <i class="fas fa-search text-gray-400"></i>
+                    </div>
+                    <input type="text" id="inventory-search" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-10 p-2.5" placeholder="Item #, Description...">
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Inventory Table -->
+            <div class="bg-white shadow rounded-lg overflow-hidden">
+              <table id="inventoryTable" class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                  <tr>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item #</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">In Stock</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Unit</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reorder Level</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Value</th>
+                    <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                  </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                  <tr>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">PEN-001</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Premium Ballpoint Pens (Box of 12)</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Office Supplies</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Office Storage</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">25</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Box</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">20</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">$312.50</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <a href="javascript:void(0)" class="text-indigo-600 hover:text-indigo-900">Adjust</a>
+                    </td>
+                  </tr>
+                  <tr class="low-stock">
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">PAP-002</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Copy Paper, Letter Size (Case of 10)</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Office Supplies</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Office Storage</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">5</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Case</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">20</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">$225.00</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <a href="javascript:void(0)" class="text-indigo-600 hover:text-indigo-900">Adjust</a>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">MON-003</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">24" LCD Monitor</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">IT Equipment</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">IT Storage</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">12</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Unit</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">5</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">$2,400.00</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <a href="javascript:void(0)" class="text-indigo-600 hover:text-indigo-900">Adjust</a>
+                    </td>
+                  </tr>
+                  <tr class="low-stock">
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">CAB-004</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">HDMI Cables, 6ft</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">IT Equipment</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">IT Storage</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">3</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Unit</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">10</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">$45.00</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <a href="javascript:void(0)" class="text-indigo-600 hover:text-indigo-900">Adjust</a>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">ALU-005</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Aluminum Sheet Metal, 4'x8'</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Raw Materials</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Warehouse</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">350</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Sheet</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">200</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">$17,500.00</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <a href="javascript:void(0)" class="text-indigo-600 hover:text-indigo-900">Adjust</a>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          
+          <!-- Movement Log Tab -->
+          <div id="movement-log" class="tab-content">
+            <!-- Filters -->
+            <div class="bg-white p-4 rounded-lg shadow mb-6">
+              <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div>
+                  <label for="movement-type" class="block mb-2 text-sm font-medium text-gray-900">Movement Type</label>
+                  <select id="movement-type" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2.5">
+                    <option value="">All Types</option>
+                    <option value="inbound">Inbound</option>
+                    <option value="outbound">Outbound</option>
+                    <option value="adjustment">Adjustment</option>
+                    <option value="transfer">Transfer</option>
+                  </select>
+                </div>
+                <div>
+                  <label for="movement-date" class="block mb-2 text-sm font-medium text-gray-900">Date Range</label>
+                  <select id="movement-date" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2.5">
+                    <option value="">All Time</option>
+                    <option value="today">Today</option>
+                    <option value="week">This Week</option>
+                    <option value="month">This Month</option>
+                    <option value="quarter">This Quarter</option>
+                  </select>
+                </div>
+                <div>
+                  <label for="movement-location" class="block mb-2 text-sm font-medium text-gray-900">Location</label>
+                  <select id="movement-location" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2.5">
+                    <option value="">All Locations</option>
+                    <option value="warehouse">Main Warehouse</option>
+                    <option value="office">Office Storage</option>
+                    <option value="production">Production Floor</option>
+                  </select>
+                </div>
+                <div>
+                  <label for="movement-search" class="block mb-2 text-sm font-medium text-gray-900">Search</label>
+                  <div class="relative">
+                    <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                      <i class="fas fa-search text-gray-400"></i>
+                    </div>
+                    <input type="text" id="movement-search" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-10 p-2.5" placeholder="Item #, Reference...">
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Movement Table -->
+            <div class="bg-white shadow rounded-lg overflow-hidden">
+              <table id="movementTable" class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                  <tr>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reference</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">From</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">To</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantity</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Notes</th>
+                  </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                  <tr>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Jun 15, 2025</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">GRN-2025-0024</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">ALU-005</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Inbound</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Vendor</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Warehouse</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">+100</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">John Smith</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">PO-2025-1039</td>
+                  </tr>
+                  <tr>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Jun 14, 2025</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">REQ-2025-0050</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">MON-003</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Outbound</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">IT Storage</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">IT Department</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">-3</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Michael Chen</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">New hire setup</td>
+                  </tr>
+                  <tr>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Jun 12, 2025</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">ADJ-2025-0018</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">CAB-004</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Adjustment</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">IT Storage</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">IT Storage</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">-2</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Emily Wilson</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Inventory count correction</td>
+                  </tr>
+                  <tr>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Jun 10, 2025</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">TRF-2025-0012</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">PAP-002</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Transfer</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Warehouse</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Office Storage</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">+5</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Sarah Johnson</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Restocking office supplies</td>
+                  </tr>
+                  <tr>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Jun 05, 2025</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">GRN-2025-0023</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">PEN-001</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Inbound</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Vendor</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Office Storage</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">+25</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Alex Rodriguez</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">PO-2025-1038</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          
+          <!-- Low Stock Tab -->
+          <div id="low-stock" class="tab-content">
+            <div class="bg-white shadow rounded-lg overflow-hidden">
+              <table id="lowStockTable" class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                  <tr>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item #</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Current Stock</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reorder Level</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                  </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                  <tr class="low-stock">
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">PAP-002</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Copy Paper, Letter Size (Case of 10)</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Office Supplies</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Office Storage</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">5</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">20</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500"><span class="status-badge status-rejected">Critical</span></td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <a href="javascript:void(0)" class="text-indigo-600 hover:text-indigo-900">Reorder</a>
+                    </td>
+                  </tr>
+                  <tr class="low-stock">
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">CAB-004</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">HDMI Cables, 6ft</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">IT Equipment</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">IT Storage</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">3</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">10</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500"><span class="status-badge status-rejected">Critical</span></td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <a href="javascript:void(0)" class="text-indigo-600 hover:text-indigo-900">Reorder</a>
+                    </td>
+                  </tr>
+                  <tr class="low-stock">
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">TON-008</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Toner Cartridges, Black</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Office Supplies</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Office Storage</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">2</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">8</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500"><span class="status-badge status-rejected">Critical</span></td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <a href="javascript:void(0)" class="text-indigo-600 hover:text-indigo-900">Reorder</a>
+                    </td>
+                  </tr>
+                  <tr class="low-stock">
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">ALU-005</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Aluminum Sheet Metal, 4'x8'</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Raw Materials</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Manufacturing</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">50</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">200</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500"><span class="status-badge status-rejected">Critical</span></td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <a href="javascript:void(0)" class="text-indigo-600 hover:text-indigo-900">Reorder</a>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          
+          <!-- Inventory Adjustment Modal -->
+          <div id="inventoryAdjustmentModal" class="fixed z-50 inset-0 overflow-y-auto hidden" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+            <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+              <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true"></div>
+              <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+              <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+                <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                  <div class="sm:flex sm:items-start">
+                    <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
+                      <h3 class="text-lg leading-6 font-medium text-gray-900" id="modal-title">
+                        Inventory Adjustment
+                      </h3>
+                      <div class="mt-4">
+                        <form id="adjustmentForm" class="space-y-4">
+                          <div>
+                            <label for="adjustment-item" class="block text-sm font-medium text-gray-700">Item</label>
+                            <select id="adjustment-item" name="adjustment-item" required class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                              <option value="">Select Item</option>
+                              <option value="PEN-001">PEN-001 - Premium Ballpoint Pens</option>
+                              <option value="PAP-002">PAP-002 - Copy Paper, Letter Size</option>
+                              <option value="MON-003">MON-003 - 24" LCD Monitor</option>
+                              <option value="CAB-004">CAB-004 - HDMI Cables, 6ft</option>
+                              <option value="ALU-005">ALU-005 - Aluminum Sheet Metal</option>
+                            </select>
+                          </div>
+                          
+                          <div>
+                            <label for="adjustment-type" class="block text-sm font-medium text-gray-700">Adjustment Type</label>
+                            <select id="adjustment-type" name="adjustment-type" required class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                              <option value="inbound">Inbound</option>
+                              <option value="outbound">Outbound</option>
+                              <option value="adjustment">Count Adjustment</option>
+                              <option value="transfer">Location Transfer</option>
+                            </select>
+                          </div>
+                          
+                          <div class="grid grid-cols-2 gap-4">
+                            <div>
+                              <label for="adjustment-qty" class="block text-sm font-medium text-gray-700">Quantity</label>
+                              <input type="number" id="adjustment-qty" name="adjustment-qty" required class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" min="1">
+                            </div>
+                            <div>
+                              <label for="adjustment-location" class="block text-sm font-medium text-gray-700">Location</label>
+                              <select id="adjustment-location" name="adjustment-location" required class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                                <option value="warehouse">Main Warehouse</option>
+                                <option value="office">Office Storage</option>
+                                <option value="production">Production Floor</option>
+                                <option value="it">IT Storage</option>
+                              </select>
+                            </div>
+                          </div>
+                          
+                          <div id="transfer-location-container" class="hidden">
+                            <label for="transfer-location" class="block text-sm font-medium text-gray-700">Transfer To</label>
+                            <select id="transfer-location" name="transfer-location" class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                              <option value="warehouse">Main Warehouse</option>
+                              <option value="office">Office Storage</option>
+                              <option value="production">Production Floor</option>
+                              <option value="it">IT Storage</option>
+                            </select>
+                          </div>
+                          
+                          <div>
+                            <label for="adjustment-reason" class="block text-sm font-medium text-gray-700">Reason / Reference</label>
+                            <input type="text" id="adjustment-reason" name="adjustment-reason" required class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="PO#, damage, cycle count, etc.">
+                          </div>
+                          
+                          <div>
+                            <label for="adjustment-notes" class="block text-sm font-medium text-gray-700">Notes</label>
+                            <textarea id="adjustment-notes" name="adjustment-notes" rows="2" class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="Additional details..."></textarea>
+                          </div>
+                        </form>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                  <button type="submit" form="adjustmentForm" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:ml-3 sm:w-auto sm:text-sm">
+                    Submit Adjustment
+                  </button>
+                  <button type="button" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm" id="closeAdjustmentBtn">
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Reports -->
+        <div id="reports" class="page-content p-4 space-y-6">
+          <div class="flex items-center justify-between mb-4">
+            <h1 class="text-2xl font-semibold text-gray-900">Reports</h1>
+            <div class="flex space-x-2">
+              <button id="exportReportBtn" class="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 font-medium rounded-lg text-sm px-5 py-2.5">
+                <i class="fas fa-file-export mr-2"></i> Export CSV
+              </button>
+              <button id="printReportBtn" class="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 font-medium rounded-lg text-sm px-5 py-2.5">
+                <i class="fas fa-print mr-2"></i> Print
+              </button>
+            </div>
+          </div>
+          
+          <!-- Tabs -->
+          <div class="border-b border-gray-200">
+            <nav class="-mb-px flex space-x-8">
+              <button class="report-tab whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm border-indigo-500 text-indigo-600 active" data-tab="spend-analysis">
+                Spend Analysis
+              </button>
+              <button class="report-tab whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300" data-tab="stock-aging">
+                Stock Aging
+              </button>
+              <button class="report-tab whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300" data-tab="pending-approvals">
+                Pending Approvals
+              </button>
+              <button class="report-tab whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300" data-tab="purchase-history">
+                Purchase History
+              </button>
+            </nav>
+          </div>
+          
+          <!-- Spend Analysis Tab -->
+          <div id="spend-analysis" class="tab-content active">
+            <!-- Filters -->
+            <div class="bg-white p-4 rounded-lg shadow mb-6">
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label for="spend-date-range" class="block mb-2 text-sm font-medium text-gray-900">Time Period</label>
+                  <select id="spend-date-range" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2.5">
+                    <option value="month">This Month</option>
+                    <option value="quarter">This Quarter</option>
+                    <option value="year">This Year</option>
+                    <option value="custom">Custom Range</option>
+                  </select>
+                </div>
+                <div>
+                  <label for="spend-group-by" class="block mb-2 text-sm font-medium text-gray-900">Group By</label>
+                  <select id="spend-group-by" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2.5">
+                    <option value="department">Department</option>
+                    <option value="category">Category</option>
+                    <option value="vendor">Vendor</option>
+                    <option value="monthly">Monthly</option>
+                  </select>
+                </div>
+                <div>
+                  <label for="spend-threshold" class="block mb-2 text-sm font-medium text-gray-900">Minimum Amount</label>
+                  <input type="number" id="spend-threshold" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2.5" placeholder="0.00" value="0">
+                </div>
+              </div>
+            </div>
+            
+            <!-- Charts -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+              <div class="bg-white p-4 rounded-lg shadow">
+                <h3 class="text-lg font-medium text-gray-900 mb-4">Spend by Department</h3>
+                <canvas id="spendByDepartment" height="300"></canvas>
+              </div>
+              <div class="bg-white p-4 rounded-lg shadow">
+                <h3 class="text-lg font-medium text-gray-900 mb-4">Monthly Spend Trend</h3>
+                <canvas id="spendTrend" height="300"></canvas>
+              </div>
+            </div>
+            
+            <!-- Table -->
+            <div class="bg-white shadow rounded-lg overflow-hidden">
+              <table id="spendTable" class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                  <tr>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Department</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Spend</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">% of Total</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"># of POs</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Avg. Order Value</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">YoY Change</th>
+                  </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                  <tr>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">IT Department</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">$42,850.00</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">32.5%</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">24</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">$1,785.42</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-green-600">+5.3%</td>
+                  </tr>
+                  <tr>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">Manufacturing</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">$38,250.00</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">29.0%</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">18</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">$2,125.00</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-red-600">-2.1%</td>
+                  </tr>
+                  <tr>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">Marketing</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">$28,420.00</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">21.5%</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">35</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">$812.00</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-green-600">+12.4%</td>
+                  </tr>
+                  <tr>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">Office Admin</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">$12,350.00</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">9.4%</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">42</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">$294.05</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">+0.8%</td>
+                  </tr>
+                  <tr>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">Human Resources</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">$10,120.00</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">7.6%</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">15</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">$674.67</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-red-600">-4.2%</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          
+          <!-- Stock Aging Tab -->
+          <div id="stock-aging" class="tab-content">
+            <!-- Filters -->
+            <div class="bg-white p-4 rounded-lg shadow mb-6">
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label for="aging-category" class="block mb-2 text-sm font-medium text-gray-900">Category</label>
+                  <select id="aging-category" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2.5">
+                    <option value="">All Categories</option>
+                    <option value="office">Office Supplies</option>
+                    <option value="it">IT Equipment</option>
+                    <option value="raw">Raw Materials</option>
+                    <option value="finished">Finished Goods</option>
+                  </select>
+                </div>
+                <div>
+                  <label for="aging-location" class="block mb-2 text-sm font-medium text-gray-900">Location</label>
+                  <select id="aging-location" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2.5">
+                    <option value="">All Locations</option>
+                    <option value="warehouse">Main Warehouse</option>
+                    <option value="office">Office Storage</option>
+                    <option value="production">Production Floor</option>
+                  </select>
+                </div>
+                <div>
+                  <label for="aging-threshold" class="block mb-2 text-sm font-medium text-gray-900">Min. Value</label>
+                  <input type="number" id="aging-threshold" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2.5" placeholder="0.00" value="100">
+                </div>
+              </div>
+            </div>
+            
+            <!-- Chart -->
+            <div class="bg-white p-4 rounded-lg shadow mb-6">
+              <h3 class="text-lg font-medium text-gray-900 mb-4">Inventory Age Distribution</h3>
+              <canvas id="stockAgingChart" height="250"></canvas>
+            </div>
+            
+            <!-- Table -->
+            <div class="bg-white shadow rounded-lg overflow-hidden">
+              <table id="agingTable" class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                  <tr>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item #</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantity</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Value</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Days in Stock</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Age Category</th>
+                  </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                  <tr>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">MON-003</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">24" LCD Monitor</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">IT Storage</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">8</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">$1,600.00</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">180</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-yellow-600">180+ Days</td>
+                  </tr>
+                  <tr>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">KEY-010</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Wireless Keyboards</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">IT Storage</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">15</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">$750.00</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">210</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-red-600">180+ Days</td>
+                  </tr>
+                  <tr>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">BRO-015</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Company Brochures</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Office Storage</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">500</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">$1,250.00</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">365</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-red-600">365+ Days</td>
+                  </tr>
+                  <tr>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">STL-005</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Stapler with Staples</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Office Storage</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">25</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">$375.00</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">90</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-green-600">0-90 Days</td>
+                  </tr>
+                  <tr>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">ALU-005</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Aluminum Sheet Metal, 4'x8'</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Warehouse</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">150</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">$7,500.00</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">45</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-green-600">0-90 Days</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          
+          <!-- Pending Approvals Tab -->
+          <div id="pending-approvals" class="tab-content">
+            <div class="bg-white shadow rounded-lg overflow-hidden">
+              <table id="approvalsTable" class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                  <tr>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date Submitted</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Requester</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Department</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pending With</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Waiting (Days)</th>
+                    <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                  </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                  <tr>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">REQ-2025-0041</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Jun 10, 2025</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Michael Chen</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">IT</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">IT Equipment</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">$3,780.00</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500"><span class="status-badge status-submitted">Submitted</span></td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">David Miller (Manager)</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-red-500">5</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <a href="javascript:void(0)" class="text-indigo-600 hover:text-indigo-900">Review</a>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">REQ-2025-0045</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Jun 11, 2025</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Jennifer Lee</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Marketing</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Trade Show Materials</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">$4,250.00</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500"><span class="status-badge status-submitted">Submitted</span></td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Sarah Johnson (Manager)</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-yellow-500">4</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <a href="javascript:void(0)" class="text-indigo-600 hover:text-indigo-900">Review</a>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">REQ-2025-0047</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Jun 12, 2025</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Robert Miller</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">HR</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Training Materials</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">$2,300.00</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500"><span class="status-badge status-submitted">Submitted</span></td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Lisa Wong (Manager)</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">3</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <a href="javascript:void(0)" class="text-indigo-600 hover:text-indigo-900">Review</a>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">REQ-2025-0042</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Jun 12, 2025</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Sarah Johnson</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Marketing</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Office Supplies</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">$1,250.00</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500"><span class="status-badge status-approved">Manager Approved</span></td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Finance Department</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">3</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <a href="javascript:void(0)" class="text-indigo-600 hover:text-indigo-900">Review</a>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">REQ-2025-0048</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Jun 14, 2025</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">James Wilson</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Production</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Manufacturing Supplies</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">$8,750.00</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500"><span class="status-badge status-submitted">Submitted</span></td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Alex Rodriguez (Manager)</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">1</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <a href="javascript:void(0)" class="text-indigo-600 hover:text-indigo-900">Review</a>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          
+          <!-- Purchase History Tab -->
+          <div id="purchase-history" class="tab-content">
+            <!-- Filters -->
+            <div class="bg-white p-4 rounded-lg shadow mb-6">
+              <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div>
+                  <label for="history-vendor" class="block mb-2 text-sm font-medium text-gray-900">Vendor</label>
+                  <select id="history-vendor" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2.5">
+                    <option value="">All Vendors</option>
+                    <option value="acme">Acme Supplies</option>
+                    <option value="tech">Tech Solutions</option>
+                    <option value="office">Office Depot</option>
+                    <option value="global">Global Manufacturing</option>
+                  </select>
+                </div>
+                <div>
+                  <label for="history-date" class="block mb-2 text-sm font-medium text-gray-900">Date Range</label>
+                  <select id="history-date" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2.5">
+                    <option value="month">This Month</option>
+                    <option value="quarter">This Quarter</option>
+                    <option value="year">This Year</option>
+                    <option value="custom">Custom Range</option>
+                  </select>
+                </div>
+                <div>
+                  <label for="history-category" class="block mb-2 text-sm font-medium text-gray-900">Category</label>
+                  <select id="history-category" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2.5">
+                    <option value="">All Categories</option>
+                    <option value="office">Office Supplies</option>
+                    <option value="it">IT Equipment</option>
+                    <option value="raw">Raw Materials</option>
+                    <option value="marketing">Marketing</option>
+                  </select>
+                </div>
+                <div>
+                  <label for="history-search" class="block mb-2 text-sm font-medium text-gray-900">Search</label>
+                  <div class="relative">
+                    <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                      <i class="fas fa-search text-gray-400"></i>
+                    </div>
+                    <input type="text" id="history-search" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-10 p-2.5" placeholder="Item, PO#...">
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Purchase History Table -->
+            <div class="bg-white shadow rounded-lg overflow-hidden">
+              <table id="historyTable" class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                  <tr>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">PO #</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vendor</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Qty</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Unit Price</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Requester</th>
+                  </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                  <tr>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">PO-2025-1042</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Jun 15, 2025</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Office Depot</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Premium Ballpoint Pens</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Office Supplies</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">10</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">$12.50</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">$125.00</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Sarah Johnson</td>
+                  </tr>
+                  <tr>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">PO-2025-1042</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Jun 15, 2025</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Office Depot</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Copy Paper, Letter Size</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Office Supplies</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">5</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">$45.00</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">$225.00</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Sarah Johnson</td>
+                  </tr>
+                  <tr>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">PO-2025-1041</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Jun 12, 2025</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Tech Solutions</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">24" LCD Monitor</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">IT Equipment</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">3</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">$200.00</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">$600.00</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Michael Chen</td>
+                  </tr>
+                  <tr>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">PO-2025-1041</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Jun 12, 2025</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Tech Solutions</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Wireless Keyboard/Mouse Combo</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">IT Equipment</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">3</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">$80.00</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">$240.00</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Michael Chen</td>
+                  </tr>
+                  <tr>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">PO-2025-1039</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Jun 05, 2025</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Global Manufacturing</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Aluminum Sheet Metal, 4'x8'</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Raw Materials</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">100</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">$50.00</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">$5,000.00</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Emily Wilson</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Admin -->
+        <div id="admin" class="page-content p-4 space-y-6">
+          <div class="flex items-center justify-between mb-4">
+            <h1 class="text-2xl font-semibold text-gray-900">Administration</h1>
+          </div>
+          
+          <!-- Tabs -->
+          <div class="border-b border-gray-200">
+            <nav class="-mb-px flex space-x-8">
+              <button class="admin-tab whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm border-indigo-500 text-indigo-600 active" data-tab="users">
+                Users & Roles
+              </button>
+              <button class="admin-tab whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300" data-tab="cost-centers">
+                Cost Centers
+              </button>
+              <button class="admin-tab whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300" data-tab="vendors">
+                Vendor Directory
+              </button>
+              <button class="admin-tab whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300" data-tab="settings">
+                System Settings
+              </button>
+            </nav>
+          </div>
+          
+          <!-- Users & Roles Tab -->
+          <div id="users" class="tab-content active">
+            <div class="flex justify-end mb-4">
+              <button class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg text-sm px-5 py-2.5">
+                <i class="fas fa-user-plus mr-2"></i> Add User
+              </button>
+            </div>
+            <div class="bg-white shadow rounded-lg overflow-hidden">
+              <table id="usersTable" class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                  <tr>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Department</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Login</th>
+                    <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                  </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                  <tr>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <div class="flex items-center">
+                        <div class="flex-shrink-0 h-10 w-10">
+                          <img class="h-10 w-10 rounded-full" src="https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_960_720.png" alt="">
+                        </div>
+                        <div class="ml-4">
+                          <div class="text-sm font-medium text-gray-900">Sarah Johnson</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">sarah.johnson@example.com</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Marketing</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Manager</td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Active</span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Jun 15, 2025 09:15 AM</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <a href="javascript:void(0)" class="text-indigo-600 hover:text-indigo-900 mr-3">Edit</a>
+                      <a href="javascript:void(0)" class="text-red-600 hover:text-red-900">Deactivate</a>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <div class="flex items-center">
+                        <div class="flex-shrink-0 h-10 w-10">
+                          <img class="h-10 w-10 rounded-full" src="https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_960_720.png" alt="">
+                        </div>
+                        <div class="ml-4">
+                          <div class="text-sm font-medium text-gray-900">Michael Chen</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">michael.chen@example.com</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">IT</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Requester</td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Active</span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Jun 15, 2025 10:22 AM</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <a href="javascript:void(0)" class="text-indigo-600 hover:text-indigo-900 mr-3">Edit</a>
+                      <a href="javascript:void(0)" class="text-red-600 hover:text-red-900">Deactivate</a>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <div class="flex items-center">
+                        <div class="flex-shrink-0 h-10 w-10">
+                          <img class="h-10 w-10 rounded-full" src="https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_960_720.png" alt="">
+                        </div>
+                        <div class="ml-4">
+                          <div class="text-sm font-medium text-gray-900">Emily Wilson</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">emily.wilson@example.com</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Production</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Manager</td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Active</span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Jun 14, 2025 04:45 PM</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <a href="javascript:void(0)" class="text-indigo-600 hover:text-indigo-900 mr-3">Edit</a>
+                      <a href="javascript:void(0)" class="text-red-600 hover:text-red-900">Deactivate</a>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <div class="flex items-center">
+                        <div class="flex-shrink-0 h-10 w-10">
+                          <img class="h-10 w-10 rounded-full" src="https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_960_720.png" alt="">
+                        </div>
+                        <div class="ml-4">
+                          <div class="text-sm font-medium text-gray-900">Robert Miller</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">robert.miller@example.com</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">HR</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Requester</td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Active</span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Jun 15, 2025 08:30 AM</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <a href="javascript:void(0)" class="text-indigo-600 hover:text-indigo-900 mr-3">Edit</a>
+                      <a href="javascript:void(0)" class="text-red-600 hover:text-red-900">Deactivate</a>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <div class="flex items-center">
+                        <div class="flex-shrink-0 h-10 w-10">
+                          <img class="h-10 w-10 rounded-full" src="https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_960_720.png" alt="">
+                        </div>
+                        <div class="ml-4">
+                          <div class="text-sm font-medium text-gray-900">Jennifer Lee</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">jennifer.lee@example.com</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Finance</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Finance Approver</td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">Away</span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Jun 10, 2025 02:15 PM</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <a href="javascript:void(0)" class="text-indigo-600 hover:text-indigo-900 mr-3">Edit</a>
+                      <a href="javascript:void(0)" class="text-red-600 hover:text-red-900">Deactivate</a>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          
+          <!-- Cost Centers Tab -->
+          <div id="cost-centers" class="tab-content">
+            <div class="flex justify-end mb-4">
+              <button class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg text-sm px-5 py-2.5">
+                <i class="fas fa-plus mr-2"></i> Add Cost Center
+              </button>
+            </div>
+            <div class="bg-white shadow rounded-lg overflow-hidden">
+              <table id="costCentersTable" class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                  <tr>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Department</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Manager</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Budget</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">YTD Spend</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                  </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                  <tr>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">CC-001</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">IT Operations</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">IT</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">David Miller</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">$150,000.00</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">$42,850.00</td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Active</span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <a href="javascript:void(0)" class="text-indigo-600 hover:text-indigo-900">Edit</a>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">CC-002</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">Manufacturing Operations</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Production</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Emily Wilson</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">$250,000.00</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">$38,250.00</td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Active</span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <a href="javascript:void(0)" class="text-indigo-600 hover:text-indigo-900">Edit</a>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">CC-003</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">Marketing Programs</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Marketing</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Sarah Johnson</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">$175,000.00</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">$28,420.00</td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Active</span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <a href="javascript:void(0)" class="text-indigo-600 hover:text-indigo-900">Edit</a>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">CC-004</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">Office Administration</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Admin</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Lisa Wong</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">$75,000.00</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">$12,350.00</td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Active</span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <a href="javascript:void(0)" class="text-indigo-600 hover:text-indigo-900">Edit</a>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">CC-005</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">Human Resources</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">HR</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">James Wilson</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">$80,000.00</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">$10,120.00</td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Active</span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <a href="javascript:void(0)" class="text-indigo-600 hover:text-indigo-900">Edit</a>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          
+          <!-- Vendors Tab -->
+          <div id="vendors" class="tab-content">
+            <div class="flex justify-end mb-4">
+              <button class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg text-sm px-5 py-2.5">
+                <i class="fas fa-plus mr-2"></i> Add Vendor
+              </button>
+            </div>
+            <div class="bg-white shadow rounded-lg overflow-hidden">
+              <table id="vendorsTable" class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                  <tr>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Payment Terms</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                  </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                  <tr>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <div class="text-sm font-medium text-gray-900">Office Depot</div>
+                      <div class="text-sm text-gray-500">123 Supply St, Business Park</div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">John Smith</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">john.smith@officedepot.com</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">(555) 123-4567</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Office Supplies</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Net 30</td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Active</span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <a href="javascript:void(0)" class="text-indigo-600 hover:text-indigo-900 mr-2">Edit</a>
+                      <a href="javascript:void(0)" class="text-gray-600 hover:text-gray-900">Pricing</a>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <div class="text-sm font-medium text-gray-900">Tech Solutions</div>
+                      <div class="text-sm text-gray-500">456 Tech Ave, Innovation Center</div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Jane Doe</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">jane.doe@techsolutions.com</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">(555) 987-6543</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">IT Equipment</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Net 45</td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Active</span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <a href="javascript:void(0)" class="text-indigo-600 hover:text-indigo-900 mr-2">Edit</a>
+                      <a href="javascript:void(0)" class="text-gray-600 hover:text-gray-900">Pricing</a>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <div class="text-sm font-medium text-gray-900">Acme Supplies</div>
+                      <div class="text-sm text-gray-500">789 Industrial Blvd, Manufacturing District</div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Robert Johnson</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">robert@acmesupplies.com</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">(555) 456-7890</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Marketing Materials</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Net 30</td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Active</span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <a href="javascript:void(0)" class="text-indigo-600 hover:text-indigo-900 mr-2">Edit</a>
+                      <a href="javascript:void(0)" class="text-gray-600 hover:text-gray-900">Pricing</a>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <div class="text-sm font-medium text-gray-900">Global Manufacturing</div>
+                      <div class="text-sm text-gray-500">101 Production Way, Industrial Park</div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Maria Garcia</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">maria@globalmfg.com</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">(555) 789-0123</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Raw Materials</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Net 60</td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Active</span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <a href="javascript:void(0)" class="text-indigo-600 hover:text-indigo-900 mr-2">Edit</a>
+                      <a href="javascript:void(0)" class="text-gray-600 hover:text-gray-900">Pricing</a>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <div class="text-sm font-medium text-gray-900">Office Furniture Co.</div>
+                      <div class="text-sm text-gray-500">222 Corporate Plaza, Downtown</div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">David Lee</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">david@officefurniture.com</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">(555) 321-6547</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Office Equipment</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Net 30</td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">Inactive</span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <a href="javascript:void(0)" class="text-indigo-600 hover:text-indigo-900 mr-2">Edit</a>
+                      <a href="javascript:void(0)" class="text-gray-600 hover:text-gray-900">Pricing</a>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          
+          <!-- System Settings Tab -->
+          <div id="settings" class="tab-content">
+            <div class="bg-white shadow rounded-lg p-6">
+              <h3 class="text-lg font-medium text-gray-900 mb-4">General Settings</h3>
+              <div class="space-y-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label for="company-name" class="block text-sm font-medium text-gray-700">Company Name</label>
+                    <input type="text" id="company-name" class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" value="Acme Corporation">
+                  </div>
+                  <div>
+                    <label for="fiscal-year" class="block text-sm font-medium text-gray-700">Fiscal Year Start</label>
+                    <select id="fiscal-year" class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                      <option value="01">January</option>
+                      <option value="02">February</option>
+                      <option value="03">March</option>
+                      <option value="04">April</option>
+                      <option value="05">May</option>
+                      <option value="06">June</option>
+                      <option value="07" selected>July</option>
+                      <option value="08">August</option>
+                      <option value="09">September</option>
+                      <option value="10">October</option>
+                      <option value="11">November</option>
+                      <option value="12">December</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label for="currency" class="block text-sm font-medium text-gray-700">Default Currency</label>
+                    <select id="currency" class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                      <option value="USD" selected>USD - US Dollar</option>
+                      <option value="EUR">EUR - Euro</option>
+                      <option value="GBP">GBP - British Pound</option>
+                      <option value="CAD">CAD - Canadian Dollar</option>
+                      <option value="AUD">AUD - Australian Dollar</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label for="tax-rate" class="block text-sm font-medium text-gray-700">Default Tax Rate (%)</label>
+                    <input type="number" id="tax-rate" class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" value="7.25">
+                  </div>
+                </div>
+                
+                <hr class="border-gray-200">
+                
+                <h3 class="text-lg font-medium text-gray-900 mb-4">Approval Settings</h3>
+                <div class="space-y-4">
+                  <div class="flex items-center">
+                    <input id="approval-manager" name="approval-workflow" type="radio" class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300" checked>
+                    <label for="approval-manager" class="ml-3 block text-sm font-medium text-gray-700">
+                      Two-Level (Manager → Finance)
+                    </label>
+                  </div>
+                  <div class="flex items-center">
+                    <input id="approval-three" name="approval-workflow" type="radio" class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300">
+                    <label for="approval-three" class="ml-3 block text-sm font-medium text-gray-700">
+                      Three-Level (Manager → Department Head → Finance)
+                    </label>
+                  </div>
+                  <div class="flex items-center">
+                    <input id="approval-value" name="approval-workflow" type="radio" class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300">
+                    <label for="approval-value" class="ml-3 block text-sm font-medium text-gray-700">
+                      Value-Based (Thresholds determine approvers)
+                    </label>
+                  </div>
+                </div>
+                
+                <div>
+                  <label for="auto-approval" class="block text-sm font-medium text-gray-700">Auto-Approval Threshold</label>
+                  <div class="mt-1 relative rounded-md shadow-sm">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <span class="text-gray-500 sm:text-sm">$</span>
+                    </div>
+                    <input type="number" id="auto-approval" class="focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-7 pr-12 sm:text-sm border-gray-300 rounded-md" value="100">
+                  </div>
+                  <p class="mt-2 text-sm text-gray-500">Requisitions below this amount are automatically approved</p>
+                </div>
+                
+                <hr class="border-gray-200">
+                
+                <h3 class="text-lg font-medium text-gray-900 mb-4">Notification Settings</h3>
+                <div class="space-y-4">
+                  <div class="flex items-start">
+                    <div class="flex items-center h-5">
+                      <input id="email-approvals" name="email-approvals" type="checkbox" class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded" checked>
+                    </div>
+                    <div class="ml-3 text-sm">
+                      <label for="email-approvals" class="font-medium text-gray-700">Email notifications for approval requests</label>
+                      <p class="text-gray-500">Send email when a requisition needs approval</p>
+                    </div>
+                  </div>
+                  <div class="flex items-start">
+                    <div class="flex items-center h-5">
+                      <input id="email-status" name="email-status" type="checkbox" class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded" checked>
+                    </div>
+                    <div class="ml-3 text-sm">
+                      <label for="email-status" class="font-medium text-gray-700">Email notifications for status changes</label>
+                      <p class="text-gray-500">Send email when requisition/PO status changes</p>
+                    </div>
+                  </div>
+                  <div class="flex items-start">
+                    <div class="flex items-center h-5">
+                      <input id="email-low-stock" name="email-low-stock" type="checkbox" class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded" checked>
+                    </div>
+                    <div class="ml-3 text-sm">
+                      <label for="email-low-stock" class="font-medium text-gray-700">Email notifications for low stock</label>
+                      <p class="text-gray-500">Send email when inventory falls below reorder levels</p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="flex justify-end pt-5">
+                  <button type="button" class="bg-white py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                    Cancel
+                  </button>
+                  <button type="submit" class="ml-3 inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                    Save Settings
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Notification Panel -->
+    <div id="notificationPanel" class="hidden fixed right-4 top-16 w-80 bg-white shadow-lg rounded-lg z-50">
+      <div class="p-3 border-b border-gray-200">
+        <h3 class="text-lg font-medium text-gray-900">Notifications</h3>
+      </div>
+      <div class="max-h-96 overflow-y-auto">
+        <div class="p-3 border-b border-gray-100 hover:bg-gray-50">
+          <div class="flex items-start">
+            <div class="flex-shrink-0 pt-0.5">
+              <span class="h-8 w-8 rounded-full bg-indigo-100 flex items-center justify-center">
+                <i class="fas fa-file-alt text-indigo-600"></i>
+              </span>
+            </div>
+            <div class="ml-3 w-0 flex-1">
+              <p class="text-sm font-medium text-gray-900">Requisition needs approval</p>
+              <p class="text-sm text-gray-500">REQ-2025-0041 from Michael Chen</p>
+              <p class="text-xs text-gray-500 mt-1">5 minutes ago</p>
+            </div>
+          </div>
+        </div>
+        <div class="p-3 border-b border-gray-100 hover:bg-gray-50">
+          <div class="flex items-start">
+            <div class="flex-shrink-0 pt-0.5">
+              <span class="h-8 w-8 rounded-full bg-green-100 flex items-center justify-center">
+                <i class="fas fa-check text-green-600"></i>
+              </span>
+            </div>
+            <div class="ml-3 w-0 flex-1">
+              <p class="text-sm font-medium text-gray-900">Requisition approved</p>
+              <p class="text-sm text-gray-500">REQ-2025-0042 has been approved</p>
+              <p class="text-xs text-gray-500 mt-1">25 minutes ago</p>
+            </div>
+          </div>
+        </div>
+        <div class="p-3 border-b border-gray-100 hover:bg-gray-50">
+          <div class="flex items-start">
+            <div class="flex-shrink-0 pt-0.5">
+              <span class="h-8 w-8 rounded-full bg-red-100 flex items-center justify-center">
+                <i class="fas fa-exclamation-triangle text-red-600"></i>
+              </span>
+            </div>
+            <div class="ml-3 w-0 flex-1">
+              <p class="text-sm font-medium text-gray-900">Low stock alert</p>
+              <p class="text-sm text-gray-500">PAP-002 - Copy Paper is below reorder level</p>
+              <p class="text-xs text-gray-500 mt-1">1 hour ago</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="p-3 border-t border-gray-200 text-center">
+        <a href="javascript:void(0)" class="text-sm font-medium text-indigo-600 hover:text-indigo-500">View all notifications</a>
+      </div>
+    </div>
+  </div>
+  
+  <script id="app-script">
+    // Navigation
+    $(document).ready(function() {
+      // Initialize DataTables
+      $('#requisitionsTable').DataTable({
+        responsive: true,
+        lengthChange: false,
+        pageLength: 10
+      });
+      
+      $('#purchaseOrdersTable').DataTable({
+        responsive: true,
+        lengthChange: false,
+        pageLength: 10
+      });
+      
+      $('#inventoryTable').DataTable({
+        responsive: true,
+        lengthChange: false,
+        pageLength: 10
+      });
+      
+      // Sidebar navigation
+      $('.sidebar-item').click(function() {
+        const targetPage = $(this).data('page');
+        
+        // Update active sidebar item
+        $('.sidebar-item').removeClass('active');
+        $(this).addClass('active');
+        
+        // Show corresponding page
+        $('.page-content').removeClass('active').hide();
+        $('#' + targetPage).addClass('active').show();
+      });
+      
+      // Toggle mobile sidebar
+      $('#toggleSidebarMobile').click(function() {
+        $('#sidebar').toggleClass('hidden');
+      });
+      
+      // Notification panel
+      $('#notificationButton').click(function() {
+        $('#notificationPanel').toggleClass('hidden');
+      });
+      
+      // Close notification panel when clicking outside
+      $(document).click(function(event) {
+        if (!$(event.target).closest('#notificationButton, #notificationPanel').length) {
+          $('#notificationPanel').addClass('hidden');
+        }
+      });
+      
+      // New Requisition Modal
+      $('#newRequisitionBtn').click(function() {
+        $('#newRequisitionModal').removeClass('hidden');
+      });
+      
+      $('#closeRequisitionBtn').click(function() {
+        $('#newRequisitionModal').addClass('hidden');
+      });
+      
+      // Add item in requisition form
+      $('#add-item').click(function() {
+        const itemRow = $('.item-row').first().clone();
+        itemRow.find('input').val('');
+        $('#items-container').append(itemRow);
+        
+        // Set up remove button for the new row
+        itemRow.find('.remove-item').click(function() {
+          $(this).closest('.item-row').remove();
+        });
+      });
+      
+      // Remove item in requisition form
+      $(document).on('click', '.remove-item', function() {
+        if ($('.item-row').length > 1) {
+          $(this).closest('.item-row').remove();
+        } else {
+          // Don't remove if it's the last item row
+          $(this).closest('.item-row').find('input').val('');
+        }
+      });
+      
+      // Requisition form submission
+      $('#requisitionForm').submit(function(e) {
+        e.preventDefault();
+        $('#newRequisitionModal').addClass('hidden');
+        
+        Swal.fire({
+          icon: 'success',
+          title: 'Requisition Submitted',
+          text: 'Your requisition has been submitted for approval.',
+          confirmButtonColor: '#4f46e5'
+        });
+      });
+      
+      // Save as Draft button
+      $('#saveDraftBtn').click(function() {
+        $('#newRequisitionModal').addClass('hidden');
+        
+        Swal.fire({
+          icon: 'success',
+          title: 'Draft Saved',
+          text: 'Your requisition has been saved as a draft.',
+          confirmButtonColor: '#4f46e5'
+        });
+      });
+      
+      // PO Details Modal
+      $('#purchaseOrdersTable').on('click', 'a.text-indigo-600', function() {
+        $('#poDetailModal').removeClass('hidden');
+      });
+      
+      $('#closePOModalBtn').click(function() {
+        $('#poDetailModal').addClass('hidden');
+      });
+      
+      // Inventory Tab Navigation
+      $('.inventory-tab').click(function() {
+        const tabId = $(this).data('tab');
+        
+        // Update active tab
+        $('.inventory-tab').removeClass('active');
+        $('.inventory-tab').removeClass('border-indigo-500 text-indigo-600');
+        $('.inventory-tab').addClass('border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300');
+        
+        $(this).addClass('active');
+        $(this).addClass('border-indigo-500 text-indigo-600');
+        $(this).removeClass('border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300');
+        
+        // Show corresponding content
+        $('.tab-content').removeClass('active');
+        $('#' + tabId).addClass('active');
+      });
+      
+      // Reports Tab Navigation
+      $('.report-tab').click(function() {
+        const tabId = $(this).data('tab');
+        
+        // Update active tab
+        $('.report-tab').removeClass('active');
+        $('.report-tab').removeClass('border-indigo-500 text-indigo-600');
+        $('.report-tab').addClass('border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300');
+        
+        $(this).addClass('active');
+        $(this).addClass('border-indigo-500 text-indigo-600');
+        $(this).removeClass('border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300');
+        
+        // Show corresponding content
+        $('.tab-content').removeClass('active');
+        $('#' + tabId).addClass('active');
+      });
+      
+      // Admin Tab Navigation
+      $('.admin-tab').click(function() {
+        const tabId = $(this).data('tab');
+        
+        // Update active tab
+        $('.admin-tab').removeClass('active');
+        $('.admin-tab').removeClass('border-indigo-500 text-indigo-600');
+        $('.admin-tab').addClass('border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300');
+        
+        $(this).addClass('active');
+        $(this).addClass('border-indigo-500 text-indigo-600');
+        $(this).removeClass('border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300');
+        
+        // Show corresponding content
+        $('.tab-content').removeClass('active');
+        $('#' + tabId).addClass('active');
+      });
+      
+      // Inventory Adjustment Modal
+      $('#newAdjustmentBtn').click(function() {
+        $('#inventoryAdjustmentModal').removeClass('hidden');
+      });
+      
+      $('#closeAdjustmentBtn').click(function() {
+        $('#inventoryAdjustmentModal').addClass('hidden');
+      });
+      
+      // Show/hide transfer location based on adjustment type
+      $('#adjustment-type').change(function() {
+        if ($(this).val() === 'transfer') {
+          $('#transfer-location-container').removeClass('hidden');
+        } else {
+          $('#transfer-location-container').addClass('hidden');
+        }
+      });
+      
+      // Adjustment form submission
+      $('#adjustmentForm').submit(function(e) {
+        e.preventDefault();
+        $('#inventoryAdjustmentModal').addClass('hidden');
+        
+        Swal.fire({
+          icon: 'success',
+          title: 'Adjustment Recorded',
+          text: 'The inventory adjustment has been recorded.',
+          confirmButtonColor: '#4f46e5'
+        });
+      });
+      
+      // Initialize Charts
+      const spendByCategoryCtx = document.getElementById('spendByCategory');
+      if (spendByCategoryCtx) {
+        new Chart(spendByCategoryCtx, {
+          type: 'doughnut',
+          data: {
+            labels: ['IT Equipment', 'Office Supplies', 'Raw Materials', 'Marketing', 'Services'],
+            datasets: [{
+              data: [35, 25, 20, 15, 5],
+              backgroundColor: [
+                '#4f46e5',
+                '#3b82f6',
+                '#06b6d4',
+                '#10b981',
+                '#f59e0b'
+              ],
+              borderWidth: 1
+            }]
+          },
+          options: {
+            responsive: true,
+            plugins: {
+              legend: {
+                position: 'bottom'
+              }
+            }
+          }
+        });
+      }
+      
+      const requisitionStatusCtx = document.getElementById('requisitionStatus');
+      if (requisitionStatusCtx) {
+        new Chart(requisitionStatusCtx, {
+          type: 'bar',
+          data: {
+            labels: ['Draft', 'Submitted', 'Approved', 'Rejected', 'Ordered'],
+            datasets: [{
+              label: 'Number of Requisitions',
+              data: [8, 15, 25, 5, 18],
+              backgroundColor: [
+                '#e5e7eb',
+                '#dbeafe',
+                '#d1fae5',
+                '#fee2e2',
+                '#fef3c7'
+              ],
+              borderColor: [
+                '#374151',
+                '#1e40af',
+                '#065f46',
+                '#b91c1c',
+                '#92400e'
+              ],
+              borderWidth: 1
+            }]
+          },
+          options: {
+            responsive: true,
+            scales: {
+              y: {
+                beginAtZero: true
+              }
+            }
+          }
+        });
+      }
+      
+      const spendByDepartmentCtx = document.getElementById('spendByDepartment');
+      if (spendByDepartmentCtx) {
+        new Chart(spendByDepartmentCtx, {
+          type: 'pie',
+          data: {
+            labels: ['IT Department', 'Manufacturing', 'Marketing', 'Office Admin', 'Human Resources'],
+            datasets: [{
+              data: [32.5, 29.0, 21.5, 9.4, 7.6],
+              backgroundColor: [
+                '#4f46e5',
+                '#3b82f6',
+                '#06b6d4',
+                '#10b981',
+                '#f59e0b'
+              ],
+              borderWidth: 1
+            }]
+          },
+          options: {
+            responsive: true,
+            plugins: {
+              legend: {
+                position: 'bottom'
+              }
+            }
+          }
+        });
+      }
+      
+      const spendTrendCtx = document.getElementById('spendTrend');
+      if (spendTrendCtx) {
+        new Chart(spendTrendCtx, {
+          type: 'line',
+          data: {
+            labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+            datasets: [{
+              label: '2025',
+              data: [25000, 32000, 28000, 38000, 30000, 34000],
+              borderColor: '#4f46e5',
+              backgroundColor: 'rgba(79, 70, 229, 0.1)',
+              tension: 0.3,
+              fill: true
+            },
+            {
+              label: '2024',
+              data: [22000, 28000, 25000, 30000, 28000, 29000],
+              borderColor: '#94a3b8',
+              backgroundColor: 'rgba(148, 163, 184, 0.1)',
+              tension: 0.3,
+              fill: true
+            }]
+          },
+          options: {
+            responsive: true,
+            scales: {
+              y: {
+                beginAtZero: true,
+                ticks: {
+                  callback: function(value) {
+                    return '$' + value.toLocaleString();
+                  }
+                }
+              }
+            }
+          }
+        });
+      }
+      
+      const stockAgingChartCtx = document.getElementById('stockAgingChart');
+      if (stockAgingChartCtx) {
+        new Chart(stockAgingChartCtx, {
+          type: 'bar',
+          data: {
+            labels: ['0-30 days', '31-90 days', '91-180 days', '181-365 days', '365+ days'],
+            datasets: [{
+              label: 'Value ($)',
+              data: [45000, 32000, 18000, 9500, 4200],
+              backgroundColor: [
+                '#d1fae5',
+                '#a7f3d0',
+                '#fef3c7',
+                '#fecaca',
+                '#f87171'
+              ],
+              borderWidth: 1
+            }]
+          },
+          options: {
+            responsive: true,
+            scales: {
+              y: {
+                beginAtZero: true,
+                ticks: {
+                  callback: function(value) {
+                    return '$' + value.toLocaleString();
+                  }
+                }
+              }
+            }
+          }
+        });
+      }
+    });
+  </script>
+</body>
+</html>
