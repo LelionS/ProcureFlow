@@ -2331,7 +2331,881 @@
       </div>
     </div>
   </div>
+  <script>
+    $(document).ready(function() {
+  // Navigation handling for main modules
+  $('.main-nav-item').click(function(e) {
+    e.preventDefault();
+    const targetModule = $(this).data('module');
+    
+    // Hide all modules
+    $('.module-container').addClass('hidden');
+    
+    // Show selected module
+    $(`#${targetModule}Module`).removeClass('hidden');
+    
+    // Update active state in navigation
+    $('.main-nav-item').removeClass('active-nav');
+    $(this).addClass('active-nav');
+    
+    // Initialize charts if dashboard is visible
+    if (targetModule === 'dashboard') {
+      initializeCharts();
+    }
+  });
   
+  // Mobile navigation toggle
+  $('#mobileNavToggle').click(function() {
+    $('#mobileNavMenu').toggleClass('hidden');
+  });
+  
+  // Initialize charts only when needed
+  function initializeCharts() {
+    // Only initialize charts if they haven't been initialized yet
+    if (typeof spendByCategoryChart === 'undefined' && document.getElementById('spendByCategory')) {
+      // Chart initialization code moved here from the bottom
+    }
+  }
+  
+  // New role-aware UI setup on page load
+  function setupRoleBasedUI() {
+    // Hide/show elements based on user role
+    if (currentUser.role === 'User') {
+      $('.user-only-buttons').removeClass('hidden');
+    } else {
+      $('.user-only-buttons').addClass('hidden');
+    }
+    
+    if (currentUser.role === 'Head of Department') {
+      $('.hod-only-buttons').removeClass('hidden');
+    } else {
+      $('.hod-only-buttons').addClass('hidden');
+    }
+    
+    if (currentUser.role === 'Storekeeper' || currentUser.role === 'Admin') {
+      $('.storekeeper-only-buttons').removeClass('hidden');
+      $('.inventory-sections').removeClass('hidden'); // Show all inventory sections
+    } else {
+      $('.storekeeper-only-buttons').addClass('hidden');
+      
+      // Only show inventory items for user's department
+      $('.inventory-section').addClass('hidden');
+      $(`.inventory-section[data-department="${currentUser.department}"]`).removeClass('hidden');
+    }
+  }
+  
+  // Call role setup on page load
+  setupRoleBasedUI();
+  
+  // Add item in requisition form
+  $('#add-item').click(function() {
+    const itemRow = $('.item-row').first().clone();
+    itemRow.find('input').val('');
+    $('#items-container').append(itemRow);
+    
+    // Set up remove button for the new row
+    itemRow.find('.remove-item').click(function() {
+      $(this).closest('.item-row').remove();
+    });
+  });
+  
+  // Remove item in requisition form
+  $(document).on('click', '.remove-item', function() {
+    if ($('.item-row').length > 1) {
+      $(this).closest('.item-row').remove();
+    } else {
+      // Don't remove if it's the last item row
+      $(this).closest('.item-row').find('input').val('');
+    }
+  });
+  
+  // Requisition form submission
+  $('#requisitionForm').submit(function(e) {
+    e.preventDefault();
+    $('#newRequisitionModal').addClass('hidden');
+    
+    Swal.fire({
+      icon: 'success',
+      title: 'Requisition Submitted',
+      text: 'Your requisition has been submitted for approval.',
+      confirmButtonColor: '#4f46e5'
+    });
+  });
+  
+  // Save as Draft button
+  $('#saveDraftBtn').click(function() {
+    $('#newRequisitionModal').addClass('hidden');
+    
+    Swal.fire({
+      icon: 'success',
+      title: 'Draft Saved',
+      text: 'Your requisition has been saved as a draft.',
+      confirmButtonColor: '#4f46e5'
+    });
+  });
+  
+  // PO Add Product modal handling
+  $('#add-product-btn').click(function() {
+    $('#addProductModal').removeClass('hidden');
+  });
+  
+  $('#closeAddProductModal').click(function() {
+    $('#addProductModal').addClass('hidden');
+  });
+  
+  // Handle product selection autocomplete
+  $('#product-search').on('input', function() {
+    // Implement autocomplete logic here
+  });
+  
+  // Save product to PO
+  function saveProductToPO() {
+    // Validate required fields
+    let isValid = true;
+    $('.product-field-required').each(function() {
+      if (!$(this).val()) {
+        $(this).addClass('border-red-500');
+        $(this).siblings('.validation-message').removeClass('hidden');
+        isValid = false;
+      } else {
+        $(this).removeClass('border-red-500');
+        $(this).siblings('.validation-message').addClass('hidden');
+      }
+    });
+    
+    if (!isValid) return false;
+    
+    // Get form values
+    const product = $('#product-search').val();
+    const quantity = $('#product-quantity').val();
+    const price = $('#product-price').val();
+    const location = $('#product-location').val();
+    const comments = $('#product-comments').val();
+    
+    // Add to PO items table
+    const newRow = `
+      <tr class="po-item">
+        <td class="px-3 py-2">${product}</td>
+        <td class="px-3 py-2">${quantity}</td>
+        <td class="px-3 py-2">$${price}</td>
+        <td class="px-3 py-2">${location}</td>
+        <td class="px-3 py-2">${comments}</td>
+        <td class="px-3 py-2">
+          <button type="button" class="remove-po-item text-red-600 hover:text-red-800">
+            <i class="fas fa-trash"></i>
+          </button>
+        </td>
+      </tr>
+    `;
+    $('#po-items-table tbody').append(newRow);
+    
+    // Update localStorage draft if needed
+    updatePODraft();
+    
+    return true;
+  }
+  
+  // Save product button
+  $('#saveProductBtn').click(function() {
+    if (saveProductToPO()) {
+      $('#addProductModal').addClass('hidden');
+    }
+  });
+  
+  // Save and add another button
+  $('#saveAddAnotherBtn').click(function() {
+    if (saveProductToPO()) {
+      // Clear form for next entry
+      $('#product-search').val('');
+      $('#product-quantity').val('');
+      $('#product-price').val('');
+      $('#product-comments').val('');
+      // Keep location same as user's department
+    }
+  });
+  
+  // Remove PO item
+  $(document).on('click', '.remove-po-item', function() {
+    $(this).closest('tr').remove();
+    updatePODraft();
+  });
+  
+  // Function to update localStorage drafts
+  function updatePODraft() {
+    // Get all PO items
+    const poItems = [];
+    $('.po-item').each(function() {
+      const cells = $(this).find('td');
+      poItems.push({
+        product: $(cells[0]).text(),
+        quantity: $(cells[1]).text(),
+        price: $(cells[2]).text().replace('$', ''),
+        location: $(cells[3]).text(),
+        comments: $(cells[4]).text()
+      });
+    });
+    
+    // Save to localStorage
+    localStorage.setItem('poDraft', JSON.stringify({
+      items: poItems,
+      lastUpdated: new Date().toISOString()
+    }));
+  }
+  
+  // Load PO draft from localStorage if exists
+  function loadPODraft() {
+    const draft = localStorage.getItem('poDraft');
+    if (draft) {
+      const poData = JSON.parse(draft);
+      
+      poData.items.forEach(item => {
+        const newRow = `
+          <tr class="po-item">
+            <td class="px-3 py-2">${item.product}</td>
+            <td class="px-3 py-2">${item.quantity}</td>
+            <td class="px-3 py-2">$${item.price}</td>
+            <td class="px-3 py-2">${item.location}</td>
+            <td class="px-3 py-2">${item.comments}</td>
+            <td class="px-3 py-2">
+              <button type="button" class="remove-po-item text-red-600 hover:text-red-800">
+                <i class="fas fa-trash"></i>
+              </button>
+            </td>
+          </tr>
+        `;
+        $('#po-items-table tbody').append(newRow);
+      });
+    }
+  }
+  
+  // Call draft loading on page init
+  loadPODraft();
+  
+  // PO Details Modal
+  $('#purchaseOrdersTable').on('click', 'a.text-indigo-600', function() {
+    $('#poDetailModal').removeClass('hidden');
+  });
+  
+  $('#closePOModalBtn').click(function() {
+    $('#poDetailModal').addClass('hidden');
+  });
+  
+  // Inventory Tab Navigation
+  $('.inventory-tab').click(function() {
+    const tabId = $(this).data('tab');
+    
+    // Update active tab
+    $('.inventory-tab').removeClass('active');
+    $('.inventory-tab').removeClass('border-indigo-500 text-indigo-600');
+    $('.inventory-tab').addClass('border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300');
+    
+    $(this).addClass('active');
+    $(this).addClass('border-indigo-500 text-indigo-600');
+    $(this).removeClass('border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300');
+    
+    // Show corresponding content
+    $('.tab-content').removeClass('active');
+    $('#' + tabId).addClass('active');
+  });
+  
+  // Reports Tab Navigation
+  $('.report-tab').click(function() {
+    const tabId = $(this).data('tab');
+    
+    // Update active tab
+    $('.report-tab').removeClass('active');
+    $('.report-tab').removeClass('border-indigo-500 text-indigo-600');
+    $('.report-tab').addClass('border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300');
+    
+    $(this).addClass('active');
+    $(this).addClass('border-indigo-500 text-indigo-600');
+    $(this).removeClass('border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300');
+    
+    // Show corresponding content
+    $('.tab-content').removeClass('active');
+    $('#' + tabId).addClass('active');
+  });
+  
+  // Admin Tab Navigation
+  $('.admin-tab').click(function() {
+    const tabId = $(this).data('tab');
+    
+    // Update active tab
+    $('.admin-tab').removeClass('active');
+    $('.admin-tab').removeClass('border-indigo-500 text-indigo-600');
+    $('.admin-tab').addClass('border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300');
+    
+    $(this).addClass('active');
+    $(this).addClass('border-indigo-500 text-indigo-600');
+    $(this).removeClass('border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300');
+    
+    // Show corresponding content
+    $('.tab-content').removeClass('active');
+    $('#' + tabId).addClass('active');
+  });
+  
+  // Inventory Adjustment Modal
+  $('#newAdjustmentBtn').click(function() {
+    $('#inventoryAdjustmentModal').removeClass('hidden');
+  });
+  
+  $('#closeAdjustmentBtn').click(function() {
+    $('#inventoryAdjustmentModal').addClass('hidden');
+  });
+  
+  // Show/hide transfer location based on adjustment type
+  $('#adjustment-type').change(function() {
+    if ($(this).val() === 'transfer') {
+      $('#transfer-location-container').removeClass('hidden');
+    } else {
+      $('#transfer-location-container').addClass('hidden');
+    }
+  });
+  
+  // Adjustment form submission
+  $('#adjustmentForm').submit(function(e) {
+    e.preventDefault();
+    $('#inventoryAdjustmentModal').addClass('hidden');
+    
+    Swal.fire({
+      icon: 'success',
+      title: 'Adjustment Recorded',
+      text: 'The inventory adjustment has been recorded.',
+      confirmButtonColor: '#4f46e5'
+    });
+  });
+  
+  // Add filter event handlers for requisitions table
+  $('#statusFilter').on('change', function() {
+    filterRequisitionsTable();
+  });
+  
+  $('#costCenterFilter').on('change', function() {
+    filterRequisitionsTable();  
+  });
+  
+  $('#dateRangeFilter').on('change', function() {
+    filterRequisitionsTable();
+  });
+  
+  function filterRequisitionsTable() {
+    const status = $('#statusFilter').val();
+    const costCenter = $('#costCenterFilter').val();
+    const dateRange = $('#dateRangeFilter').val();
+    
+    // Apply filters to requisitions table
+    $('#requisitionsTable tr.req-row').each(function() {
+      const rowStatus = $(this).data('status');
+      const rowCostCenter = $(this).data('cost-center');
+      const rowDate = $(this).data('date');
+      
+      let showRow = true;
+      
+      if (status && status !== 'all' && rowStatus !== status) {
+        showRow = false;
+      }
+      
+      if (costCenter && costCenter !== 'all' && rowCostCenter !== costCenter) {
+        showRow = false;
+      }
+      
+      // Date range logic would go here
+      
+      if (showRow) {
+        $(this).removeClass('hidden');
+      } else {
+        $(this).addClass('hidden');
+      }
+    });
+  }
+  
+  // Initialize DataTables for all major tables
+  $('.datatable').DataTable({
+    responsive: true,
+    pageLength: 10,
+    lengthChange: false,
+    info: true,
+    searching: true
+  });
+  
+  // Update QuickBooks sync status indicator
+  function updateSyncStatus(status) {
+    $('#quickbooksSyncStatus').text(status);
+    $('#quickbooksIcon').removeClass('text-red-500').addClass('text-green-500');
+  }
+  
+  // Handle notifications
+  function createNotification(title, message) {
+    const notifItem = `
+      <div class="notification-item p-3 border-b border-gray-200">
+        <h4 class="font-medium text-gray-800">${title}</h4>
+        <p class="text-sm text-gray-600">${message}</p>
+        <span class="text-xs text-gray-400">${new Date().toLocaleString()}</span>
+      </div>
+    `;
+    
+    $('#notificationsDropdown').prepend(notifItem);
+    
+    // Update notification count
+    const count = $('.notification-item').length;
+    $('#notificationCount').text(count).removeClass('hidden');
+  }
+  
+  // Toggle notifications dropdown
+  $('#notificationBell').click(function() {
+    $('#notificationsDropdown').toggleClass('hidden');
+  });
+  
+  // Generate PDF and email PO
+  $(document).on('click', '.generate-po-pdf', function() {
+    const poId = $(this).data('po-id');
+    
+    Swal.fire({
+      title: 'Processing...',
+      text: 'Generating PDF and preparing email',
+      allowOutsideClick: false,
+      didOpen: () => {
+        Swal.showLoading();
+      }
+    });
+    
+    // Simulate processing
+    setTimeout(() => {
+      Swal.fire({
+        icon: 'success',
+        title: 'Success!',
+        text: `PO #${poId} has been processed and email sent.`,
+        confirmButtonColor: '#1e3a8a'
+      });
+    }, 2000);
+  });
+  
+  // Handle low stock highlighting
+  function highlightLowStockItems() {
+    $('.inventory-item').each(function() {
+      const currentQty = parseInt($(this).data('current-qty'));
+      const reorderLevel = parseInt($(this).data('reorder-level'));
+      
+      if (currentQty <= reorderLevel) {
+        $(this).addClass('bg-red-50');
+        $(this).find('.stock-status').addClass('text-red-600').text('Low Stock');
+      }
+    });
+  }
+  
+  // Handle detail view modals for requisitions and POs
+  $(document).on('click', '.view-requisition-details', function() {
+    const reqId = $(this).data('req-id');
+    $('#requisitionDetailModal').removeClass('hidden');
+    
+    // Load requisition details (in production would fetch from server)
+    $('#requisitionDetailId').text(reqId);
+  });
+  
+  $(document).on('click', '.view-po-details', function() {
+    const poId = $(this).data('po-id');
+    $('#poDetailModal').removeClass('hidden');
+    
+    // Load PO details (in production would fetch from server)
+    $('#poDetailId').text(poId);
+  });
+  
+  // Admin module handlers for CRUD operations
+  $('.admin-add-btn').click(function() {
+    const entityType = $(this).data('entity');
+    $(`#add${entityType}Modal`).removeClass('hidden');
+  });
+  
+  $('.admin-edit-btn').click(function() {
+    const entityType = $(this).data('entity');
+    const entityId = $(this).data('id');
+    $(`#edit${entityType}Modal`).removeClass('hidden');
+    
+    // Load entity details (in production would fetch from server)
+    $(`#edit${entityType}Id`).val(entityId);
+  });
+  
+  $('.admin-delete-btn').click(function() {
+    const entityType = $(this).data('entity');
+    const entityId = $(this).data('id');
+    
+    Swal.fire({
+      title: 'Are you sure?',
+      text: `Do you want to delete this ${entityType.toLowerCase()}?`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#ef4444',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: 'Yes, delete it!'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        // Delete entity (in production would call API)
+        Swal.fire(
+          'Deleted!',
+          `The ${entityType.toLowerCase()} has been deleted.`,
+          'success'
+        );
+      }
+    });
+  });
+  
+  // Call highlighting function
+  highlightLowStockItems();
+  
+  // Initialize the first module (dashboard) on page load
+  $('.main-nav-item[data-module="dashboard"]').click();
+  
+  // PO PDF Generation & Email Loop
+  function startPOProcessingLoop() {
+    console.log("Starting PO processing loop");
+    
+    function processPendingPOs() {
+      console.log("Checking for POs that need PDF generation or emails...");
+      
+      // In production: This would fetch pending POs from database
+      // const pendingPOs = fetchPendingPOsFromDatabase();
+      
+      // Mock processing pending POs
+      setTimeout(() => {
+        console.log("Processing complete - PDFs generated and emails sent");
+        
+        // For each PO that needs processing:
+        // 1. Generate PDF
+        // 2. Send email with PDF attachment
+        // 3. Update PO status in database
+      }, 1500);
+    }
+    
+    // Initial check on page load
+    processPendingPOs();
+    
+    // Set up regular processing interval (every 5 minutes)
+    setInterval(processPendingPOs, 5 * 60 * 1000);
+  }
+  
+  // Modified QuickBooks sync function to update UI
+  function startQuickBooksSync() {
+    console.log("Starting QuickBooks sync process");
+    
+    function syncWithQuickBooks() {
+      console.log("Syncing with QuickBooks...");
+      $('#quickbooksIcon').removeClass('text-green-500').addClass('text-yellow-500');
+      
+      // Mock API call to QuickBooks
+      setTimeout(() => {
+        console.log("QuickBooks sync completed");
+        updateSyncStatus("Last synced: " + new Date().toLocaleString());
+      }, 2000);
+    }
+    
+    // Initial sync on page load
+    syncWithQuickBooks();
+    
+    // Set up regular sync interval (every 30 minutes)
+    setInterval(syncWithQuickBooks, 30 * 60 * 1000);
+  }
+  
+  // Modified low stock scanner to create notifications
+  function startLowStockScanner() {
+    console.log("Starting low stock monitoring");
+    
+    function checkLowStockLevels() {
+      console.log("Scanning inventory for low stock items...");
+      
+      // Mock low stock check
+      setTimeout(() => {
+        console.log("Low stock scan complete");
+        
+        // Update low stock counter in dashboard
+        $('#lowStockCount').text('5');
+        
+        // Create notification
+        createNotification("Low Stock Alert", "5 items below reorder threshold");
+        
+        highlightLowStockItems();
+      }, 1000);
+    }
+    
+    // Initial check on page load
+    checkLowStockLevels();
+    
+    // Set up regular check interval (every 60 minutes)
+    setInterval(checkLowStockLevels, 60 * 60 * 1000);
+  }
+  
+  // Initialize background processes if user has appropriate permissions
+  if (currentUser.role === 'Admin' || currentUser.role === 'Storekeeper') {
+    startQuickBooksSync();
+    startPOProcessingLoop();
+    startLowStockScanner();
+  }
+  
+  // Initialize Charts
+  const spendByCategoryCtx = document.getElementById('spendByCategory');
+  if (spendByCategoryCtx) {
+    new Chart(spendByCategoryCtx, {
+      type: 'doughnut',
+      data: {
+        labels: ['IT Equipment', 'Office Supplies', 'Raw Materials', 'Marketing', 'Services'],
+        datasets: [{
+          data: [35, 25, 20, 15, 5],
+          backgroundColor: [
+            '#4f46e5',
+            '#3b82f6',
+            '#06b6d4',
+            '#10b981',
+            '#f59e0b'
+          ],
+          borderWidth: 1
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: {
+            position: 'bottom'
+          }
+        }
+      }
+    });
+  }
+  
+  const requisitionStatusCtx = document.getElementById('requisitionStatus');
+  if (requisitionStatusCtx) {
+    new Chart(requisitionStatusCtx, {
+      type: 'bar',
+      data: {
+        labels: ['Draft', 'Submitted', 'Approved', 'Rejected', 'Ordered'],
+        datasets: [{
+          label: 'Number of Requisitions',
+          data: [8, 15, 25, 5, 18],
+          backgroundColor: [
+            '#e5e7eb',
+            '#dbeafe',
+            '#d1fae5',
+            '#fee2e2',
+            '#fef3c7'
+          ],
+          borderColor: [
+            '#374151',
+            '#1e40af',
+            '#065f46',
+            '#b91c1c',
+            '#92400e'
+          ],
+          borderWidth: 1
+        }]
+      },
+      options: {
+        responsive: true,
+        scales: {
+          y: {
+            beginAtZero: true
+          }
+        }
+      }
+    });
+  }
+  
+  const spendByDepartmentCtx = document.getElementById('spendByDepartment');
+  if (spendByDepartmentCtx) {
+    new Chart(spendByDepartmentCtx, {
+      type: 'pie',
+      data: {
+        labels: ['IT Department', 'Manufacturing', 'Marketing', 'Office Admin', 'Human Resources'],
+        datasets: [{
+          data: [32.5, 29.0, 21.5, 9.4, 7.6],
+          backgroundColor: [
+            '#4f46e5',
+            '#3b82f6',
+            '#06b6d4',
+            '#10b981',
+            '#f59e0b'
+          ],
+          borderWidth: 1
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: {
+            position: 'bottom'
+          }
+        }
+      }
+    });
+  }
+  
+  const spendTrendCtx = document.getElementById('spendTrend');
+  if (spendTrendCtx) {
+    new Chart(spendTrendCtx, {
+      type: 'line',
+      data: {
+        labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+        datasets: [{
+          label: '2025',
+          data: [25000, 32000, 28000, 38000, 30000, 34000],
+          borderColor: '#4f46e5',
+          backgroundColor: 'rgba(79, 70, 229, 0.1)',
+          tension: 0.3,
+          fill: true
+        },
+        {
+          label: '2024',
+          data: [22000, 28000, 25000, 30000, 28000, 29000],
+          borderColor: '#94a3b8',
+          backgroundColor: 'rgba(148, 163, 184, 0.1)',
+          tension: 0.3,
+          fill: true
+        }]
+      },
+      options: {
+        responsive: true,
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: {
+              callback: function(value) {
+                return '$' + value.toLocaleString();
+              }
+            }
+          }
+        }
+      }
+    });
+  }
+  
+  const stockAgingChartCtx = document.getElementById('stockAgingChart');
+  if (stockAgingChartCtx) {
+    new Chart(stockAgingChartCtx, {
+      type: 'bar',
+      data: {
+        labels: ['0-30 days', '31-90 days', '91-180 days', '181-365 days', '365+ days'],
+        datasets: [{
+          label: 'Value ($)',
+          data: [45000, 32000, 18000, 9500, 4200],
+          backgroundColor: [
+            '#d1fae5',
+            '#a7f3d0',
+            '#fef3c7',
+            '#fecaca',
+            '#f87171'
+          ],
+          borderWidth: 1
+        }]
+      },
+      options: {
+        responsive: true,
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: {
+              callback: function(value) {
+                return '$' + value.toLocaleString();
+              }
+            }
+          }
+        }
+      }
+    });
+  }
+  
+  // ===== ADDED STUB FUNCTIONS FOR BACKGROUND LOOPS =====
+  
+  // QuickBooks Integration Sync Loop
+  function startQuickBooksSync() {
+    console.log("Starting QuickBooks sync process");
+    
+    // This would normally be on a timer/interval in a real implementation
+    function syncWithQuickBooks() {
+      console.log("Syncing with QuickBooks...");
+      
+      // Mock API call to QuickBooks
+      // In production: This would be an actual API call to QuickBooks API
+      setTimeout(() => {
+        console.log("QuickBooks sync completed");
+        // Process returned data
+        // Update local database with QuickBooks data
+        
+        // Notify user of sync completion if needed
+        // updateSyncStatus("Last synced: " + new Date().toLocaleString());
+      }, 2000);
+    }
+    
+    // Initial sync on page load
+    syncWithQuickBooks();
+    
+    // Set up regular sync interval (every 30 minutes)
+    setInterval(syncWithQuickBooks, 30 * 60 * 1000);
+  }
+  
+  // PO PDF Generation & Email Loop
+  function startPOProcessingLoop() {
+    console.log("Starting PO processing loop");
+    
+    function processPendingPOs() {
+      console.log("Checking for POs that need PDF generation or emails...");
+      
+      // In production: This would fetch pending POs from database
+      // const pendingPOs = fetchPendingPOsFromDatabase();
+      
+      // Mock processing pending POs
+      setTimeout(() => {
+        console.log("Processing complete - PDFs generated and emails sent");
+        
+        // For each PO that needs processing:
+        // 1. Generate PDF
+        // 2. Send email with PDF attachment
+        // 3. Update PO status in database
+      }, 1500);
+    }
+    
+    // Initial check on page load
+    processPendingPOs();
+    
+    // Set up regular processing interval (every 5 minutes)
+    setInterval(processPendingPOs, 5 * 60 * 1000);
+  }
+  
+  // Low Stock Alert Scanner Loop
+  function startLowStockScanner() {
+    console.log("Starting low stock monitoring");
+    
+    function checkLowStockLevels() {
+      console.log("Scanning inventory for low stock items...");
+      
+      // In production: This would query the inventory database
+      // const inventoryItems = fetchInventoryFromDatabase();
+      
+      // Mock low stock check
+      setTimeout(() => {
+        console.log("Low stock scan complete");
+        
+        // For each item below threshold:
+        // 1. Generate notification
+        // 2. Add to low stock report
+        // 3. Trigger automatic reorder if configured
+        
+        // Sample notification creation:
+        // createNotification("Low Stock Alert", "5 items below reorder threshold");
+      }, 1000);
+    }
+    
+    // Initial check on page load
+    checkLowStockLevels();
+    
+    // Set up regular check interval (every 60 minutes)
+    setInterval(checkLowStockLevels, 60 * 60 * 1000);
+  }
+  
+  // Initialize background processes if user has appropriate permissions
+  if (currentUser.role === 'Admin' || currentUser.role === 'Storekeeper') {
+    startQuickBooksSync();
+    startPOProcessingLoop();
+    startLowStockScanner();
+  }
+});
+  </script>
   <script id="app-script">
     // Navigation
     $(document).ready(function() {
